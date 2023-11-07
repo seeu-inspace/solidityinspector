@@ -105,11 +105,15 @@ def check_for_issues(solidity_file)
 	
 	major, minor, patch = pragma_version.gsub("^","").gsub(">","").gsub("<","").gsub("=","").split(".")
 	
+	#gas issues
+	issues[:use_recent_solidity] = issues[:use_recent_solidity].to_s + "\n => pragma solidity " + pragma_version + ";" if (minor.to_i < 8 || ( minor.to_i == 8 && patch.to_i < 10)) && pragma_version != "no_version_found"
+	
 	# qa issues
 	# :: non-critical issues ::
 	issues[:missing_spdx] = " => The Solidity file is missing the SPDX-License-Identifier" if !solidity_file.include?("SPDX-License-Identifier")
 	# :: low issues ::
 	issues[:unspecific_compiler_version_pragma] = " => pragma solidity " + pragma_version + ";" if pragma_version.include?("<") || pragma_version.include?(">") || pragma_version.include?(">=") || pragma_version.include?("<=") || pragma_version.include?("^")
+	issues[:outdated_pragma] = issues[:outdated_pragma].to_s + " => #{pragma_version}" if (minor.to_i < 8 || ( minor.to_i == 8 && patch.to_i < 10)) && pragma_version != "no_version_found"
 	
 	#medium issues
 	issues[:ownable_pausable] = issues[:ownable_pausable].to_s + " => This contract may be Ownable and Pausable" if solidity_file.include?("Ownable") && solidity_file.include?("Pausable")
@@ -160,6 +164,7 @@ def check_for_issues(solidity_file)
 		issues[:unnamed_return_params] = issues[:unnamed_return_params].to_s + format if line.include?("function") && line.include?("returns") && !line.end_with?(";")
 		issues[:use_of_abi_encodepacked] = issues[:use_of_abi_encodepacked].to_s + format if line.match?(/abi.encodePacked\(/) && (minor.to_i > 8 || (minor.to_i == 8 && patch.to_i >= 4)) && pragma_version != "no_version_found"
 		issues[:make_modern_import] = issues[:make_modern_import].to_s + format if line.include?("import") && !line.include?("{")
+		issues[:file_missing_pragma] = issues[:file_missing_pragma].to_s + " => no_version_found" if pragma_version == "no_version_found"
 		# :: low issues ::
 		issues[:empty_body] = issues[:empty_body].to_s + format if line.match?(/(\{\})|(\{ \})/i) && !line.include?("//") && !line.include?("receive()")
 		issues[:unsafe_erc20_operations] = issues[:unsafe_erc20_operations].to_s + format if line.match?(/\.transferFrom\(|\.increaseAllowance\(|\.decreaseAllowance\(/)
@@ -170,6 +175,9 @@ def check_for_issues(solidity_file)
 		issues[:draft_openzeppelin] = issues[:draft_openzeppelin].to_s + format if line.include?("import") && line.include?("openzeppelin") && line.include?("draft")
 		issues[:use_of_blocktimestamp] = issues[:use_of_blocktimestamp].to_s + format if line.include?("block.timestamp") || line.include?("now")
 		issues[:calls_in_loop] = issues[:calls_in_loop].to_s + format if line.match?(/\.transfer\(|\.transferFrom\(|\.call|\.delegatecall/) && inside_loop
+		issues[:ownableupgradeable] = issues[:ownableupgradeable].to_s + format if line.include?("OwnableUpgradeable")
+		issues[:ecrecover_addr_zero] = issues[:ecrecover_addr_zero].to_s + format if line.include?("ecrecover(") && !line.include?("address(0)")
+		issues[:dont_use_assert] = issues[:dont_use_assert].to_s + format if line.include?("assert(")
 		
 		# medium issues
 		issues[:single_point_of_control] = issues[:single_point_of_control].to_s + format if line.match(/( onlyOwner )|( onlyRole\()|( requiresAuth )|(Owned)!?([(, ])|(Ownable)!?([(, ])|(Ownable2Step)!?([(, ])|(AccessControl)!?([(, ])|(AccessControlCrossChain)!?([(, ])|(AccessControlEnumerable)!?([(, ])|(Auth)!?([(, ])|(RolesAuthority)!?([(, ])|(MultiRolesAuthority)!?([(, ])/i)
@@ -263,6 +271,7 @@ begin
 			issues_map << {key: :bool_equals_bool, title: "\e[37mUse if(x) or if(!x) instead of if (x == bool)\e[0m", issues: ""}
 			issues_map << {key: :strict_comparison, title: "\e[37mWhen possible, use non-strict comparison >= and/or =< instead of > <\e[0m", issues: ""}
 			issues_map << {key: :private_rather_than_public, title: "\e[37mIf possible, use private rather than public for constants\e[0m", issues: ""}
+			issues_map << {key: :use_recent_solidity, title: "\e[37mUse a more recent version of Solidity to save gas\e[0m", issues: ""}
 			
 			# qa issues
 			# :: non-critical issues ::
@@ -272,6 +281,7 @@ begin
 			issues_map << {key: :make_modern_import, title: "\e[92mFor modern and more readable code; update import usages\e[0m", issues: ""}
 			issues_map << {key: :todo_unfinished_code, title: "\e[92mCode base comments with TODOs\e[0m", issues: ""}
 			issues_map << {key: :missing_spdx, title: "\e[92mSPDX-License-Identifier missing\e[0m", issues: ""}
+			issues_map << {key: :file_missing_pragma, title: "\e[92mFile is missing pragma\e[0m", issues: ""}
 			# :: low issues ::
 			issues_map << {key: :empty_body, title: "\e[92mConsider commenting why the body of the function is empty\e[0m", issues: ""}
 			issues_map << {key: :unspecific_compiler_version_pragma, title: "\e[32mCompiler version Pragma is non-specific\e[0m", issues: ""}
@@ -283,6 +293,10 @@ begin
 			issues_map << {key: :draft_openzeppelin, title: "\e[32mDraft OpenZeppelin dependencies\e[0m", issues: ""}
 			issues_map << {key: :use_of_blocktimestamp, title: "\e[32mTimestamp dependency: use of block.timestamp (or now)\e[0m", issues: ""}
 			issues_map << {key: :calls_in_loop, title: "\e[32mUsage of calls inside of loop\e[0m", issues: ""}
+			issues_map << {key: :outdated_pragma, title: "\e[32mOutdated Compiler Version\e[0m", issues: ""}
+			issues_map << {key: :ownableupgradeable, title: "\e[32mUse Ownable2StepUpgradeable instead of OwnableUpgradeable contract\e[0m", issues: ""}
+			issues_map << {key: :ecrecover_addr_zero, title: "\e[32mecrecover() does not check for address(0)\e[0m", issues: ""}
+			issues_map << {key: :dont_use_assert, title: "\e[32mUse require instead of assert\e[0m", issues: ""}
 			
 			# medium issues
 			issues_map << {key: :single_point_of_control, title: "\e[33mCentralization risk detected: contract has a single point of control\e[0m", issues: ""}
