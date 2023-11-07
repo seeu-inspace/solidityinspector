@@ -12,7 +12,7 @@
 | [G-08](#g-08-use-assembly-to-check-for-address0) | Use assembly to check for address(0) | 5 | 15 | 90 |
 | [G-09](#g-09-use-require-instead-of-assert-when-possible) | Use "require" instead of "assert" when possible | 4 | 20 | - |
 | [G-10](#g-10-usage-of-uintsints-smaller-than-32-bytes-256-bits-incurs-overhead) | Usage of uints/ints smaller than 32 bytes (256 bits) incurs overhead | 2 | 2 | - |
-| [G-11](#g-11-split-require-statements-that-use--to-save-gas) | Split require() statements that use && to save gas | 1 | 1 | - |
+| [G-11](#g-11-split-require-statements-that-use--to-save-gas) | Split require() statements that use && to save gas | 1 | 1 | 8 |
 | [G-12](#g-12-x--y-costs-more-gas-than-x--x--y-for-state-variables) | x += y costs more gas than x = x + y for state variables | 3 | 22 | 2486 |
 | [G-13](#g-13-when-possible-use-non-strict-comparison--andor--instead-of--) | When possible, use non-strict comparison >= and/or =< instead of > < | 9 | 64 | 960 |
 | [G-14](#g-14-if-possible-use-private-rather-than-public-for-constants) | If possible, use private rather than public for constants | 10 | 30 | 102180 |
@@ -20,7 +20,7 @@
 
 | Total issues | Total contexts | Total instances | Total minimum gas saved |
 | ------------ | -------------- | --------------- | ----------------------- |
-| 15           | 80             | 262             | 259787                  |
+| 15           | 80             | 262             | 259795                  |
 
 ## [G-01] Using bools for storage incurs overhead
 
