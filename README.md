@@ -13,7 +13,7 @@ SolidityInspector checks for 23 gas issues, 7 non-critical issues, 15 low issues
 ## Usage
 
 1. Clone the Repository and Ensure that you have Ruby installed on your system;
-2. Run the Script with `ruby solidity_analyzer.rb`
+2. Run the Script with `ruby solidityinspector.rb`
 3. Enter the path to the directory containing the smart contracts to analyze. Ideally, save the directory containing the contracts in the same directory as the script
 
 ### Example of usage
