@@ -8,7 +8,7 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 
 A Ruby script to analyze Solidity smart contracts for code quality, security, and gas optimization issues. I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er) and [Slither](https://github.com/crytic/slither) as inspiration.
 
-SolidityInspector checks for 23 gas issues, 7 non-critical issues, 15 low issues, 3 medium issues and 1 low to high issue.
+SolidityInspector checks for 23 gas issues, 7 non-critical issues, 15 low issues, 3 medium issues and 1 high issue.
 
 ## Usage
 
