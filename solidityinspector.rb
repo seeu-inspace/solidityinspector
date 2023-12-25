@@ -277,7 +277,7 @@ begin
 			# :: non-critical issues ::
 			issues_map << {key: :require_revert_missing_descr, title: "\e[92mrequire()/revert() statements should have descriptive reason strings\e[0m", issues: ""}
 			issues_map << {key: :unnamed_return_params, title: "\e[92mUnnamed return parameters\e[0m", issues: ""}
-			issues_map << {key: :use_of_abi_encodepacked, title: "\e[92mUsage of abi.encodePacked instead of bytes.concat() for Solidity version >= 0.8.4 \e[0m", issues: ""}
+			issues_map << {key: :use_of_abi_encodepacked, title: "\e[92mUsage of abi.encodePacked instead of bytes.concat() for Solidity version >= 0.8.4\e[0m", issues: ""}
 			issues_map << {key: :make_modern_import, title: "\e[92mFor modern and more readable code; update import usages\e[0m", issues: ""}
 			issues_map << {key: :todo_unfinished_code, title: "\e[92mCode base comments with TODOs\e[0m", issues: ""}
 			issues_map << {key: :missing_spdx, title: "\e[92mSPDX-License-Identifier missing\e[0m", issues: ""}
