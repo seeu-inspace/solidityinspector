@@ -72,7 +72,7 @@ Using bools for storage incurs overhead Instances (40)
 
 | Number | Key | Title | Severity |
 | --- | --- | --- | --- |
-| 1 | `bool_storage_overhead` | Using bools for storage incurs overhead | Gas optimization |
+| 1 | `bool_storage_overhead` | [Using bools for storage incurs overhead](wiki/./#using-bools-for-storage-incurs-overhead) | Gas optimization |
 | 2 | `cache_array_outside_loop` | Array length not cached outside of loop | Gas optimization |
 | 3 | `default_variable_initialization` | Variables initialized with default value | Gas optimization |
 | 4 | `shift_instead_of_divmul` | Missing implementation Shift Right/Left for division and multiplication | Gas optimization |
