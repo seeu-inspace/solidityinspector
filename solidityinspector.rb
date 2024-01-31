@@ -115,9 +115,6 @@ def check_for_issues(solidity_file)
 	issues[:unspecific_compiler_version_pragma] = " => pragma solidity " + pragma_version + ";" if pragma_version.include?("<") || pragma_version.include?(">") || pragma_version.include?(">=") || pragma_version.include?("<=") || pragma_version.include?("^")
 	issues[:outdated_pragma] = issues[:outdated_pragma].to_s + " => #{pragma_version}" if (minor.to_i < 8 || ( minor.to_i == 8 && patch.to_i < 10)) && pragma_version != "no_version_found"
 	
-	#medium issues
-	issues[:ownable_pausable] = issues[:ownable_pausable].to_s + " => This contract may be Ownable and Pausable" if solidity_file.include?("Ownable") && solidity_file.include?("Pausable")
-	
 	lines = solidity_file.split("\n")
 
 	lines.each_with_index do |line, index|
@@ -301,7 +298,6 @@ begin
 			# medium issues
 			issues_map << {key: :single_point_of_control, title: "\e[33mCentralization risk detected: contract has a single point of control\e[0m", issues: ""}
 			issues_map << {key: :use_safemint_msgsender, title: "\e[33mNFT can be frozen in the contract, use _safeMint instead of _mint\e[0m", issues: ""}
-			issues_map << {key: :ownable_pausable, title: "\e[33mDoS: The contract enables ownable and pausable at the same time\e[0m", issues: ""}
 			
 
 			sol_files.each do |sol_file|
