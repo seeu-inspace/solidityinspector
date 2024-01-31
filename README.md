@@ -118,8 +118,8 @@ Using bools for storage incurs overhead Instances (40)
 | 44 | `dont_use_assert` | [Use require instead of assert](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low issue |
 | 45 | `single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-contracts-have-a-single-point-of-control) | Medium severity |
 | 46 | `use_safemint_msgsender` | [NFT can be frozen in the contract, use _safeMint instead of _mint](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract) | Medium severity |
-| 47 | - | Outdated version of @openzeppelin/contracts ::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version} | High severity |
-| 48 | - | Outdated version of @openzeppelin/contracts-upgradeable ::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version} | High severity |
+| 47 | - | [Outdated version of @openzeppelin/contracts ::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version}](https://github.com/seeu-inspace/solidityinspector/wiki#erc165checker-may-revert-instead-of-returning-false) | High severity |
+| 48 | - | [Outdated version of @openzeppelin/contracts-upgradeable ::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version}](https://github.com/seeu-inspace/solidityinspector/wiki#erc165checker-may-revert-instead-of-returning-false) | High severity |
 
 
 ## Example reports
