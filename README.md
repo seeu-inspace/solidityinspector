@@ -9,7 +9,7 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 
 A Ruby script to analyze Solidity smart contracts for code quality, security, and gas optimization issues. I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er) and [Slither](https://github.com/crytic/slither) as inspiration.
 
-SolidityInspector checks for 23 gas issues, 7 non-critical issues, 14 low issues, 3 medium issues and 2 low to high issue.
+SolidityInspector checks for 23 gas issues, 7 non-critical issues, 14 low issues, 2 medium issues and 2 low to high issue.
 
 
 ## Usage
@@ -116,11 +116,10 @@ Using bools for storage incurs overhead Instances (40)
 | 42 | `ownableupgradeable` | [Use Ownable2StepUpgradeable instead of OwnableUpgradeable contract](https://github.com/seeu-inspace/solidityinspector/wiki#use-ownable2stepupgradeable-instead-of-ownableupgradeable-contract) | Low issue |
 | 43 | `ecrecover_addr_zero` | [ecrecover() does not check for address(0)](https://github.com/seeu-inspace/solidityinspector/wiki#ecrecover-does-not-check-for-address0) | Low issue |
 | 44 | `dont_use_assert` | [Use require instead of assert](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low issue |
-| 45 | `single_point_of_control` | Centralization risk detected: contract has a single point of control | Medium severity |
-| 46 | `use_safemint_msgsender` | NFT can be frozen in the contract, use _safeMint instead of _mint | Medium severity |
-| 47 | `ownable_pausable` | DoS: The contract enables ownable and pausable at the same time | Medium severity |
-| 48 | - | Outdated version of @openzeppelin/contracts ::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version} | High severity |
-| 49 | - | Outdated version of @openzeppelin/contracts-upgradeable ::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version} | High severity |
+| 45 | `single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-contracts-have-a-single-point-of-control) | Medium severity |
+| 46 | `use_safemint_msgsender` | [NFT can be frozen in the contract, use _safeMint instead of _mint](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract) | Medium severity |
+| 47 | - | Outdated version of @openzeppelin/contracts ::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version} | High severity |
+| 48 | - | Outdated version of @openzeppelin/contracts-upgradeable ::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version} | High severity |
 
 
 ## Example reports
