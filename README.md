@@ -95,27 +95,27 @@ Using bools for storage incurs overhead Instances (40)
 | 21 | `strict_comparison` | [When possible, use non-strict comparison >= and/or =< instead of > <](https://github.com/seeu-inspace/solidityinspector/wiki#when-possible-use-non-strict-comparison--andor--instead-of--) | Gas optimization |
 | 22 | `private_rather_than_public` | [If possible, use private rather than public for constants](https://github.com/seeu-inspace/solidityinspector/wiki#if-possible-use-private-rather-than-public-for-constants) | Gas optimization |
 | 23 | `use_recent_solidity` | [Use a more recent version of Solidity to save gas](https://github.com/seeu-inspace/solidityinspector/wiki#use-a-more-recent-version-of-solidity-to-save-gas) | Gas optimization |
-| 24 | `require_revert_missing_descr` | require()/revert() statements should have descriptive reason strings | Non-critical issue |
-| 25 | `unnamed_return_params` | Unnamed return parameters | Non-critical issue |
-| 26 | `use_of_abi_encodepacked` | Usage of abi.encodePacked instead of bytes.concat() for Solidity version >= 0.8.4 | Non-critical issue |
-| 27 | `make_modern_import` | For modern and more readable code; update import usages | Non-critical issue |
-| 28 | `todo_unfinished_code` | Code base comments with TODOs | Non-critical issue |
-| 29 | `missing_spdx` | SPDX-License-Identifier missing | Non-critical issue |
-| 30 | `file_missing_pragma` | File is missing pragma | Non-critical issue |
-| 31 | `empty_body` | Consider commenting why the body of the function is empty | Low issue |
-| 32 | `unspecific_compiler_version_pragma` | Compiler version Pragma is non-specific | Low issue |
-| 33 | `unsafe_erc20_operations` | Unsafe ERC20 operations | Low issue |
-| 34 | `deprecated_oz_library_functions` | Deprecated OpenZeppelin library functions | Low issue |
-| 35 | `abiencoded_dynamic` | Avoid using abi.encodePacked() with dynamic types when passing the result to a hash function | Low issue |
-| 36 | `transfer_ownership` | Use safeTransferOwnership instead of the transferOwnership method | Low issue |
-| 37 | `use_safemint` | Use _safeMint instead of _mint | Low issue |
-| 38 | `draft_openzeppelin` | Draft OpenZeppelin dependencies | Low issue |
-| 39 | `use_of_blocktimestamp` | Timestamp dependency: use of block.timestamp (or now) | Low issue |
-| 40 | `calls_in_loop` | Usage of calls inside of loop | Low issue |
-| 41 | `outdated_pragma` | Outdated Compiler Version | Low issue |
-| 42 | `ownableupgradeable` | Use Ownable2StepUpgradeable instead of OwnableUpgradeable contract | Low issue |
-| 43 | `ecrecover_addr_zero` | ecrecover() does not check for address(0) | Low issue |
-| 44 | `dont_use_assert` | Use require instead of assert | Low issue |
+| 24 | `require_revert_missing_descr` | [require()/revert() statements should have descriptive reason strings](https://github.com/seeu-inspace/solidityinspector/wiki#requirerevert-statements-should-have-descriptive-reason-strings) | Non-critical issue |
+| 25 | `unnamed_return_params` | [Unnamed return parameters](https://github.com/seeu-inspace/solidityinspector/wiki#unnamed-return-parameters) | Non-critical issue |
+| 26 | `use_of_abi_encodepacked` | [Usage of abi.encodePacked instead of bytes.concat() for Solidity version >= 0.8.4](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-abiencodepacked-instead-of-bytesconcat-for-solidity-version--084) | Non-critical issue |
+| 27 | `make_modern_import` | [For modern and more readable code; update import usages](https://github.com/seeu-inspace/solidityinspector/wiki#for-modern-and-more-readable-code-update-import-usages) | Non-critical issue |
+| 28 | `todo_unfinished_code` | [Code base comments with TODOs](https://github.com/seeu-inspace/solidityinspector/wiki#code-base-comments-with-todos) | Non-critical issue |
+| 29 | `missing_spdx` | [SPDX-License-Identifier missing](https://github.com/seeu-inspace/solidityinspector/wiki#spdx-license-identifier-missing) | Non-critical issue |
+| 30 | `file_missing_pragma` | [File is missing pragma](https://github.com/seeu-inspace/solidityinspector/wiki#file-is-missing-pragma) | Non-critical issue |
+| 31 | `empty_body` | [Consider commenting why the body of the function is empty](https://github.com/seeu-inspace/solidityinspector/wiki#consider-commenting-why-the-body-of-the-function-is-empty) | Low issue |
+| 32 | `unspecific_compiler_version_pragma` | [Compiler version Pragma is non-specific](https://github.com/seeu-inspace/solidityinspector/wiki#compiler-version-pragma-is-non-specific) | Low issue |
+| 33 | `unsafe_erc20_operations` | [Unsafe ERC20 operations](https://github.com/seeu-inspace/solidityinspector/wiki#unsafe-erc20-operations) | Low issue |
+| 34 | `deprecated_oz_library_functions` | [Deprecated OpenZeppelin library functions](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-openzeppelin-library-functions) | Low issue |
+| 35 | `abiencoded_dynamic` | [Avoid using abi.encodePacked() with dynamic types when passing the result to a hash function](https://github.com/seeu-inspace/solidityinspector/wiki#avoid-using-abiencodepacked-with-dynamic-types-when-passing-the-result-to-a-hash-function) | Low issue |
+| 36 | `transfer_ownership` | [Use safeTransferOwnership instead of the transferOwnership method](https://github.com/seeu-inspace/solidityinspector/wiki#use-safetransferownership-instead-of-the-transferownership-method) | Low issue |
+| 37 | `use_safemint` | [Use _safeMint instead of _mint](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Low issue |
+| 38 | `draft_openzeppelin` | [Draft OpenZeppelin dependencies](https://github.com/seeu-inspace/solidityinspector/wiki#draft-openzeppelin-dependencies) | Low issue |
+| 39 | `use_of_blocktimestamp` | [Timestamp dependency: use of block.timestamp (or now)](https://github.com/seeu-inspace/solidityinspector/wiki#timestamp-dependency) | Low issue |
+| 40 | `calls_in_loop` | [Usage of calls inside of loop](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-calls-inside-of-loop) | Low issue |
+| 41 | `outdated_pragma` | [Outdated Compiler Version](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-compiler-version) | Low issue |
+| 42 | `ownableupgradeable` | [Use Ownable2StepUpgradeable instead of OwnableUpgradeable contract](https://github.com/seeu-inspace/solidityinspector/wiki#use-ownable2stepupgradeable-instead-of-ownableupgradeable-contract) | Low issue |
+| 43 | `ecrecover_addr_zero` | [ecrecover() does not check for address(0)](https://github.com/seeu-inspace/solidityinspector/wiki#ecrecover-does-not-check-for-address0) | Low issue |
+| 44 | `dont_use_assert` | [Use require instead of assert](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low issue |
 | 45 | `single_point_of_control` | Centralization risk detected: contract has a single point of control | Medium severity |
 | 46 | `use_safemint_msgsender` | NFT can be frozen in the contract, use _safeMint instead of _mint | Medium severity |
 | 47 | `ownable_pausable` | DoS: The contract enables ownable and pausable at the same time | Medium severity |
