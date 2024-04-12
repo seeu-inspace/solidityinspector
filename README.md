@@ -159,6 +159,8 @@ Analysis executed in 0.007742611 seconds
 
 ## Example reports
 
+These reports were generated entirely by SolidityInspector without manual review.
+
 | Project | Platform | Report |
 | --- | --- | --- |
 | [SolidityToken](https://github.com/seeu-inspace/soliditytoken) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
