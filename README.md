@@ -18,7 +18,16 @@ SolidityInspector checks for 23 gas issues, 9 non-critical issues, 16 low issues
 
 ## Usage
 
-1. Clone the Repository and Ensure that you have Ruby installed on your system;
+#### Linux
+1. Ensure that you have Ruby installed on your system and Run the following command
+  ```shell
+  curl -o- -L https://raw.githubusercontent.com/seeu-inspace/solidityinspector/main/install.sh | bash
+  ```
+2. Run the command `solidityinspector`
+3. Enter the path to the directory containing the smart contracts to analyze
+
+#### Alternatively
+1. Download [solidityinspector.rb](https://github.com/seeu-inspace/solidityinspector/blob/main/solidityinspector.rb) and Ensure that you have Ruby installed on your system;
 2. Run the Script with `ruby solidityinspector.rb`
 3. Enter the path to the directory containing the smart contracts to analyze. Ideally, save the directory containing the contracts in the same directory as the script
 
@@ -26,7 +35,7 @@ SolidityInspector checks for 23 gas issues, 9 non-critical issues, 16 low issues
 ### Example of usage
 
 ```shell
-└─$ ruby solidityinspector.rb
+└─$ solidityinspector
  __                     ___       _
 (_  _  |  o  _| o _|_ \/ | __  _ |_) _  _ _|_ _  __
 __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
