@@ -16,8 +16,8 @@ detect_profile() {
 }
 
 # Download the Ruby script
-wget -O solidityinspector.rb https://raw.githubusercontent.com/seeu-inspace/solidityinspector/main/solidityinspector.rb
-dos2unix solidityinspector.rb
+wget -q -O solidityinspector.rb https://raw.githubusercontent.com/seeu-inspace/solidityinspector/main/solidityinspector.rb
+dos2unix -q solidityinspector.rb
 
 # Move the Ruby script to /usr/local/bin
 sudo mv solidityinspector.rb /usr/local/bin
