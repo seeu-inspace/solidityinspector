@@ -135,9 +135,9 @@ Analysis executed in 0.007742611 seconds
 | 34 | `:unspecific_compiler_version_pragma` | [Compiler version Pragma is non-specific](https://github.com/seeu-inspace/solidityinspector/wiki#compiler-version-pragma-is-non-specific) | Low |
 | 35 | `:unsafe_erc20_operations` | [Unsafe ERC20 operations](https://github.com/seeu-inspace/solidityinspector/wiki#unsafe-erc20-operations) | Low |
 | 36 | `:deprecated_oz_library_functions` | [Deprecated OpenZeppelin library functions](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-openzeppelin-library-functions) | Low |
-| 37 | `:abiencoded_dynamic` | [Avoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function](https://github.com/seeu-inspace/solidityinspector/wiki#avoid-using-abiencodepacked-with-dynamic-types-when-passing-the-result-to-a-hash-function) | Low |
+| 37 | `:abiencoded_dynamic` | [Avoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-abiencodepacked-instead-of-bytesconcat-for-solidity-version--084) | Low |
 | 38 | `:transfer_ownership` | [Use `safeTransferOwnership` instead of the `transferOwnership` method](https://github.com/seeu-inspace/solidityinspector/wiki#use-safetransferownership-instead-of-the-transferownership-method) | Low |
-| 39 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-safemint-instead-of-mint) | Low |
+| 39 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Low |
 | 40 | `:draft_openzeppelin` | [Draft OpenZeppelin dependencies](https://github.com/seeu-inspace/solidityinspector/wiki#draft-openzeppelin-dependencies) | Low |
 | 41 | `:use_of_blocktimestamp` | [Timestamp dependency: use of `block.timestamp` (or `now`)](https://github.com/seeu-inspace/solidityinspector/wiki#timestamp-dependency-use-of-blocktimestamp-or-now) | Low |
 | 42 | `:calls_in_loop` | [Usage of calls inside of loop](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-calls-inside-of-loop) | Low |
@@ -146,13 +146,13 @@ Analysis executed in 0.007742611 seconds
 | 45 | `:ecrecover_addr_zero` | [`ecrecover()` does not check for `address(0)`](https://github.com/seeu-inspace/solidityinspector/wiki#ecrecover-does-not-check-for-address0) | Low |
 | 46 | `:dont_use_assert` | [Use `require` instead of `assert`](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low |
 | 47 | `:deprecated_cl_library_function` | [Deprecated ChainLink library function](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-chainlink-library-function) | Low |
-| 48 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity-0820-push0-opcode-incompatibility-across-evm-chains) | Low |
+| 48 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity--0820-push0-opcode-incompatibility-across-evm-chains) | Low |
 | 49 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
-| 50 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-safemint-instead-of-mint) | Medium |
+| 50 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
 | 51 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
 | 52 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
 | 53 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
-| 54 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom-safetransferfrom) | High |
+| 54 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
 | 55 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
 | 56 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
 
