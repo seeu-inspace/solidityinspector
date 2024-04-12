@@ -19,7 +19,7 @@ I've created it to help me in the process of learning smart contract auditing an
 ## Usage
 
 #### Linux
-1. Ensure that you have Ruby installed on your system and Run the following command
+1. Ensure that you have Ruby installed on your system and Run the following command to install SolidityInspector
   ```shell
   bash <(curl -sL https://raw.githubusercontent.com/seeu-inspace/solidityinspector/main/install.sh)
   ```
