@@ -161,5 +161,5 @@ Analysis executed in 0.007742611 seconds
 
 | Project | Platform | Report |
 | --- | --- | --- |
-| [SolidityToken](https://github.com/seeu-inspace/soliditytoken) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report#soliditytoken.md) |
-| [KittensOnChain](https://github.com/code-423n4/2023-02-ethos/) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report#kittensonchain.md) |
+| [SolidityToken](https://github.com/seeu-inspace/soliditytoken) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
+| [KittensOnChain](https://github.com/seeu-inspace/KittensOnChain) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
