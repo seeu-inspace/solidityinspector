@@ -327,12 +327,12 @@ def create_report(issues_map, sol_files)
 			categorized_issues[category].each do |issue|
 				issue_title = issue[:issue][:title].gsub(/\e\[\d+m/, '') # Remove ANSI escape codes
 				sanitized_title = issue_title
-				  .downcase								   # Convert to lowercase
-				  .delete("`!@#\$%^&*()[]{}|\\\":;'<>,.?~\/") # Remove most special characters
-				  .gsub(/[^a-z0-9\-]/, '-')				   # Replace non-alphanumeric characters with hyphens
-				  .split('-')								 # Split the string by hyphens
-				  .reject(&:empty?)						   # Remove empty elements (resulting from consecutive hyphens)
-				  .join('-')								  # Join the remaining elements back together with a single hyphen
+				  .downcase					# Convert to lowercase
+				  .delete("`!@#\$%^&*()[]{}|\\\":;'<>,.?~\/")	# Remove most special characters
+				  .gsub(/[^a-z0-9\-]/, '-')			# Replace non-alphanumeric characters with hyphens
+				  .split('-')					# Split the string by hyphens
+				  .reject(&:empty?)				# Remove empty elements (resulting from consecutive hyphens)
+				  .join('-')					# Join the remaining elements back together with a single hyphen
 				report_file.puts "\t- [#{issue[:severity]}-#{'%02d' % issue[:position]} #{issue_title}](##{issue[:severity]}-#{'%02d' % issue[:position]}-#{sanitized_title})"
 			end
 		end
@@ -393,13 +393,13 @@ def create_report(issues_map, sol_files)
 			
 			contexts_size = issue[:issues].scan(/\.sol/).size || 0
 			sanitized_title = issue[:title]
-				  .gsub(/\e\[\d+m/, '')						  # Remove ANSI escape codes
-				  .downcase								   # Convert to lowercase
-				  .delete("`!@#\$%^&*()[]{}|\\\":;'<>,.?~\/") # Remove most special characters
-				  .gsub(/[^a-z0-9\-]/, '-')				   # Replace non-alphanumeric characters with hyphens
-				  .split('-')								 # Split the string by hyphens
-				  .reject(&:empty?)						   # Remove empty elements (resulting from consecutive hyphens)
-				  .join('-')								  # Join the remaining elements back together with a single hyphen
+				  .gsub(/\e\[\d+m/, '')				# Remove ANSI escape codes
+				  .downcase					# Convert to lowercase
+				  .delete("`!@#\$%^&*()[]{}|\\\":;'<>,.?~\/")	# Remove most special characters
+				  .gsub(/[^a-z0-9\-]/, '-')			# Replace non-alphanumeric characters with hyphens
+				  .split('-')					# Split the string by hyphens
+				  .reject(&:empty?)				# Remove empty elements (resulting from consecutive hyphens)
+				  .join('-')					# Join the remaining elements back together with a single hyphen
 			id_link = "[#{severity}-#{'%02d' % position}](##{severity}-#{'%02d' % position}-#{sanitized_title})"
 			
 			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} |" if !is_gas
