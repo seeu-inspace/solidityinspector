@@ -108,6 +108,16 @@ Analysis executed in 0.007742611 seconds
 ```
 
 
+## Example reports
+
+These reports were generated entirely by SolidityInspector without manual review.
+
+| Project | Platform | Report |
+| --- | --- | --- |
+| [SolidityToken](https://github.com/seeu-inspace/soliditytoken) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
+| [KittensOnChain](https://github.com/seeu-inspace/KittensOnChain) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
+
+
 ### Detectors
 
 | Number | Key | Title | Severity |
@@ -169,12 +179,3 @@ Analysis executed in 0.007742611 seconds
 | 55 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
 | 56 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
 
-
-## Example reports
-
-These reports were generated entirely by SolidityInspector without manual review.
-
-| Project | Platform | Report |
-| --- | --- | --- |
-| [SolidityToken](https://github.com/seeu-inspace/soliditytoken) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
-| [KittensOnChain](https://github.com/seeu-inspace/KittensOnChain) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
