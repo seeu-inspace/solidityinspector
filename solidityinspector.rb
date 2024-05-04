@@ -108,7 +108,7 @@ end
 def check_for_issues(solidity_file)
 	issues = {}
 
-	inside_loop = false
+	n_loop = 0
 
 	pragma_version = extract_pragma_version(solidity_file)
 
@@ -137,8 +137,8 @@ def check_for_issues(solidity_file)
 
 		next if is_comment?(line)
 
-		if (line.include?("for") || line.include?("while")) && line.include?("{")
-			inside_loop = true
+		if (line.include?("for (") || line.include?("while (")) && line.include?("{")
+			n_loop = n_loop + 1
 		end
 
 		# gas issues
@@ -193,7 +193,7 @@ def check_for_issues(solidity_file)
 		issues[:use_safemint] = issues[:use_safemint].to_s + format if line.match?(/_mint\(/)
 		issues[:draft_openzeppelin] = issues[:draft_openzeppelin].to_s + format if line.include?("import") && line.include?("openzeppelin") && line.include?("draft")
 		issues[:use_of_blocktimestamp] = issues[:use_of_blocktimestamp].to_s + format if line.include?("block.timestamp") || line.include?("now")
-		issues[:calls_in_loop] = issues[:calls_in_loop].to_s + format if line.match?(/\.transfer\(|\.transferFrom\(|\.call|\.delegatecall/) && inside_loop
+		issues[:calls_in_loop] = issues[:calls_in_loop].to_s + format if line.match?(/\.transfer\(|\.transferFrom\(|\.call|\.delegatecall/) && n_loop > 0
 		issues[:ownableupgradeable] = issues[:ownableupgradeable].to_s + format if line.include?("OwnableUpgradeable")
 		issues[:ecrecover_addr_zero] = issues[:ecrecover_addr_zero].to_s + format if line.include?("ecrecover(") && !line.include?("address(0)")
 		issues[:dont_use_assert] = issues[:dont_use_assert].to_s + format if line.include?("assert(")
@@ -204,9 +204,10 @@ def check_for_issues(solidity_file)
 		issues[:use_safemint_msgsender] = issues[:use_safemint_msgsender].to_s + format if line.match?(/_mint\(/) && line.include?("msg.sender")
 		issues[:use_of_cl_lastanswer] = issues[:use_of_cl_lastanswer].to_s + format if line.match?(/\.latestAnswer\(/)
 		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && solidity_file.include?("SafeTransferLib.sol")
+		issues[:nested_loop] = issues[:nested_loop].to_s + format if ((line.include?("for (") || line.include?("while (")) && line.include?("{")) && n_loop > 1
 
 		# high issues
-		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && inside_loop
+		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && n_loop > 0
 		## arbitrary_from_in_transferFrom
 		if line.match?(/\btransferFrom\s*\(/) || line.match?(/\bsafeTransferFrom\s*\(/)
 			# Extracting the first argument within parentheses
@@ -217,8 +218,8 @@ def check_for_issues(solidity_file)
 		end
 
 		# check if you are not in a loop anymore
-		if line.include?("}") && inside_loop
-			inside_loop = false
+		if line.include?("}") && n_loop > 0
+			n_loop = n_loop - 1
 		end
 
 	end
@@ -561,6 +562,7 @@ begin
 			issues_map << {key: :use_safemint_msgsender, title: "\e[33mNFT can be frozen in the contract, use `_safeMint` instead of `_mint`\e[0m", description: "The NFT can be frozen in the contract if `msg.sender` is an address for a contract that does not support ERC721. This means that users could lose their NFT. It is reccomended to use `_safeMint` instead of `_mint`. References: [EIP-721](https://eips.ethereum.org/EIPS/eip-721), [ERC721.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol#L274-L285).", issues: ""}
 			issues_map << {key: :use_of_cl_lastanswer, title: "\e[33mUse of the deprecated `latestAnswer` function in contracts\e[0m", description: "[As per Chainlink's documentation](https://docs.chain.link/data-feeds/api-reference#latestanswer), the `latestAnswer` function is no longer recommended for use. This function does not generate an error in case no answer is available; instead, it returns 0, which could lead to inaccurate prices being provided to various price feeds or potentially result in a Denial of Service. It is recommended to use [`latestRoundData()`](https://docs.chain.link/data-feeds/api-reference#latestrounddata).", issues: ""}
 			issues_map << {key: :solmate_not_safe, title: "\e[33mSafeTransferLib.sol does not check if a token is a contract or not\e[0m", description: "[As per Solmate's SafeTransferLib.sol](https://github.com/transmissions11/solmate/blob/main/src/utils/SafeTransferLib.sol#L9), the contract does not verify the existence of the token contract, delegating this responability to the caller. This creates the possiblity for a honeypot attack. An example is the [Qubit Finance hack in January 2022](https://www.halborn.com/blog/post/explained-the-qubit-hack-january-2022). Consider using [OpenZeppelin's SafeERC20](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#SafeERC20) instead.", issues: ""}
+			issues_map << {key: :nested_loop, title: "\e[33mNested loops possibly leading to Denial of Service\e[0m", description: "Nested loops in Solidity can lead to an exponential increase in gas consumption. This can cause transactions to fail causing a Denial of Service which can compromise the reliability and scalability of the protocol.", issues: ""}
 
 			# high issues
 			issues_map << {key: :delegatecall_in_loop, title: "\e[31mUse of `delegatecall` inside of a loop\e[0m", description: "Using `delegatecall` in a payable function within a loop can pose a vulnerability where each call retains the `msg.value` of the initial transaction. This can lead to unexpected behaviors, especially in scenarios involving fund transfers. References: [\"Two Rights Might Make A Wrong\" by samczsun](https://www.paradigm.xyz/2021/08/two-rights-might-make-a-wrong)",issues: ""}
