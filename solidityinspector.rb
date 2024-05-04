@@ -347,6 +347,7 @@ def create_report(issues_map, sol_files)
 	report_file.puts "### Files analyzed\n\n"
 	report_file.puts "| Filepath |\n| --- |\n"
 	sol_files.each do |sol_file|
+		# TODO: add SLOC
 		report_file.puts "| #{sol_file[:path]} |\n"
 	end
 	report_file.puts "\n"
@@ -403,8 +404,8 @@ def create_report(issues_map, sol_files)
 			id_link = "[#{severity}-#{'%02d' % position}](##{severity}-#{'%02d' % position}-#{sanitized_title})"
 			
 			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} |" if !is_gas
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | - | " if is_gas && issue[:gas] == 0
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | ~#{issue[:gas] * issue[:instances]} | " if is_gas && issue[:gas] > 0
+			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | - |" if is_gas && issue[:gas] == 0
+			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | ~#{issue[:gas] * issue[:instances]} |" if is_gas && issue[:gas] > 0
 
 		end
 
