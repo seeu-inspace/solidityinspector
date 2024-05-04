@@ -174,8 +174,9 @@ These reports were generated entirely by SolidityInspector without manual review
 | 50 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
 | 51 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
 | 52 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
-| 53 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
-| 54 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
-| 55 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
-| 56 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
+| 53 | `:nested_loop` | [Nested loops could lead to Denial of Service](https://github.com/seeu-inspace/solidityinspector/wiki#nested-loops-could-lead-to-denial-of-service) | Medium
+| 54 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
+| 55 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
+| 56 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
+| 57 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
 
