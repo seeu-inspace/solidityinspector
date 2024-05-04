@@ -54,7 +54,6 @@ end
 
 
 
-# ToDo: a version of this function to checks for versions in `Makefile`
 def check_dependencies_issues(dependencies, issues_map)
 	if dependencies
 		if dependencies['@openzeppelin/contracts']
