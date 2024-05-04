@@ -26,14 +26,14 @@ sudo mv solidityinspector.rb /usr/local/bin
 PROFILE=$(detect_profile)
 
 if [ -n "$PROFILE" ]; then
-		# Check if the alias already exists
-		if ! grep -q 'alias solidityinspector="ruby /usr/local/bin/solidityinspector.rb"' "$PROFILE"; then
-				echo 'alias solidityinspector="ruby /usr/local/bin/solidityinspector.rb"' >> "$PROFILE"
-				echo "Alias 'solidityinspector' created successfully! Please restart your shell to apply changes."
-		else
-				echo "Alias 'solidityinspector' already exists in $PROFILE."
-		fi
+	# Check if the alias already exists
+	if ! grep -q 'alias solidityinspector="ruby /usr/local/bin/solidityinspector.rb"' "$PROFILE"; then
+		echo 'alias solidityinspector="ruby /usr/local/bin/solidityinspector.rb"' >> "$PROFILE"
+		echo "Alias 'solidityinspector' created successfully! Please restart your shell to apply changes."
+	else
+		echo "Alias 'solidityinspector' already exists in $PROFILE."
+	fi
 else
-		echo "Unable to detect shell profile. Please add the following alias manually:"
-		echo "alias solidityinspector='ruby /usr/local/bin/solidityinspector.rb'"
+	echo "Unable to detect shell profile. Please add the following alias manually:"
+	echo "alias solidityinspector='ruby /usr/local/bin/solidityinspector.rb'"
 fi
