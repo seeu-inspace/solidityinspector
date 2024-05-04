@@ -203,7 +203,7 @@ def check_for_issues(solidity_file)
 		issues[:single_point_of_control] = issues[:single_point_of_control].to_s + format if line.match(/( onlyOwner )|( onlyRole\()|( requiresAuth )|(Owned)!?([(, ])|(Ownable)!?([(, ])|(Ownable2Step)!?([(, ])|(AccessControl)!?([(, ])|(AccessControlCrossChain)!?([(, ])|(AccessControlEnumerable)!?([(, ])|(Auth)!?([(, ])|(RolesAuthority)!?([(, ])|(MultiRolesAuthority)!?([(, ])/i)
 		issues[:use_safemint_msgsender] = issues[:use_safemint_msgsender].to_s + format if line.match?(/_mint\(/) && line.include?("msg.sender")
 		issues[:use_of_cl_lastanswer] = issues[:use_of_cl_lastanswer].to_s + format if line.match?(/\.latestAnswer\(/)
-		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) if solidity_file.include?("SafeTransferLib.sol")
+		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && solidity_file.include?("SafeTransferLib.sol")
 
 		# high issues
 		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && inside_loop
