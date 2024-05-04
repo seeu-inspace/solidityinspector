@@ -43,6 +43,18 @@ end
 
 
 
+def count_lines_of_code(file_path)
+	file = File.open(file_path, "r")
+	lines_count = 0
+	file.each_line do |line|
+		lines_count += 1 if !line.strip.empty? && !is_comment?(line)
+	end
+	file&.close
+	return lines_count
+end
+
+
+
 def extract_pragma_version(solidity_file)
 	pragma_line = solidity_file.split("\n").find { |line| line.start_with?("pragma solidity") }
 	if pragma_line != nil
@@ -344,10 +356,9 @@ def create_report(issues_map, sol_files)
 
 	# Summary -> Write "Files analyzed" table
 	report_file.puts "### Files analyzed\n\n"
-	report_file.puts "| Filepath |\n| --- |\n"
+	report_file.puts "| Filepath | SLOC |\n| --- | --- |\n"
 	sol_files.each do |sol_file|
-		# TODO: add SLOC
-		report_file.puts "| #{sol_file[:path]} |\n"
+		report_file.puts "| #{sol_file[:path]} | #{count_lines_of_code(sol_file[:path])} |\n"
 	end
 	report_file.puts "\n"
 
