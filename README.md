@@ -11,7 +11,7 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-A Solidity Static Analyzer made in Ruby designed to assess smart contracts written in solidity for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas issues, 9 non-critical issues, 16 low issues, 5 medium issues and 4 high issue and creates a markdown report containing the analysis results.
+A Solidity Static Analyzer made in Ruby designed to assess smart contracts written in solidity for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas issues, 9 non-critical issues, 17 low issues, 5 medium issues and 5 high issue and creates a markdown report containing the analysis results.
 
 I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er), [Aderyn](https://github.com/Cyfrin/aderyn) and [Slither](https://github.com/crytic/slither) as inspiration.
 
@@ -35,13 +35,14 @@ I've created it to help me in the process of learning smart contract auditing an
 ### Example of usage
 
 ```shell
+┌──(kali㉿kali)-[~/Documents/KittensOnChain]
 └─$ solidityinspector
  __                     ___       _
 (_  _  |  o  _| o _|_ \/ | __  _ |_) _  _ _|_ _  __
 __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 └───────■ Made with <3 by Riccardo Malatesta (@seeu)
 
-Projects in the current directory:
+Subdirectories in the current directory:
 ├─ script
 ├─ img
 ├─ src
@@ -53,6 +54,8 @@ Projects in the current directory:
 
 ┌─ Enter a directory:
 └─ src
+┌─ Enter the path of the out-of-scope file [leave blank if not needed]:
+└─ out_of_scope.txt
 
 Files analyzed:
 └─ src/KittensOnChain.sol
@@ -104,7 +107,7 @@ src/KittensOnChain.sol
 ::50 =>     ) ERC721("Kitten", "KTN") Ownable(msg.sender) {
 
 Report generated: solidityinspector_report.md
-Analysis executed in 0.007742611 seconds
+Analysis executed in 0.005374072 seconds
 ```
 
 
@@ -170,13 +173,14 @@ These reports were generated entirely by SolidityInspector without manual review
 | 46 | `:dont_use_assert` | [Use `require` instead of `assert`](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low |
 | 47 | `:deprecated_cl_library_function` | [Deprecated ChainLink library function](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-chainlink-library-function) | Low |
 | 48 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity--0820-push0-opcode-incompatibility-across-evm-chains) | Low |
-| 49 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
-| 50 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
-| 51 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
-| 52 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
-| 53 | `:nested_loop` | [Nested loops could lead to Denial of Service](https://github.com/seeu-inspace/solidityinspector/wiki#nested-loops-could-lead-to-denial-of-service) | Medium
-| 54 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
-| 55 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
-| 56 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
-| 57 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
-
+| 49 | `:unused_error` | [Declared and not used errors in the contract](https://github.com/seeu-inspace/solidityinspector/wiki#declared-and-not-used-errors-in-the-contract) | Low |
+| 50 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
+| 51 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
+| 52 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
+| 53 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
+| 54 | `:nested_loop` | [Nested loops could lead to Denial of Service](https://github.com/seeu-inspace/solidityinspector/wiki#nested-loops-could-lead-to-denial-of-service) | Medium
+| 55 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
+| 56 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
+| 57 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
+| 58 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
+| 59 | `:msgvalue_in_loop` | [Use of `msg.value` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-msgvalue-inside-of-a-loop) | High |
