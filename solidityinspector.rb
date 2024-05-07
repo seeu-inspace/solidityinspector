@@ -198,6 +198,14 @@ def check_for_issues(solidity_file)
 		issues[:ecrecover_addr_zero] = issues[:ecrecover_addr_zero].to_s + format if line.include?("ecrecover(") && !line.include?("address(0)")
 		issues[:dont_use_assert] = issues[:dont_use_assert].to_s + format if line.include?("assert(")
 		issues[:deprecated_cl_library_function] = issues[:dont_use_assert].to_s + format if line.match?(/\.getTimestamp\(|\.getAnswer\(|\.latestRound\(|\.latestTimestamp\(/)
+		## => unused_error
+		if line.include?("error ")
+            error_name = line.scan(/error (\w+)/).flatten.first
+			error_usage_count = lines.count { |l| l.include?(error_name) }
+			if error_usage_count == 1
+                issues[:unused_error] = issues[:unused_error].to_s + format
+            end
+        end
 
 		# medium issues
 		issues[:single_point_of_control] = issues[:single_point_of_control].to_s + format if line.match(/( onlyOwner )|( onlyRole\()|( requiresAuth )|(Owned)!?([(, ])|(Ownable)!?([(, ])|(Ownable2Step)!?([(, ])|(AccessControl)!?([(, ])|(AccessControlCrossChain)!?([(, ])|(AccessControlEnumerable)!?([(, ])|(Auth)!?([(, ])|(RolesAuthority)!?([(, ])|(MultiRolesAuthority)!?([(, ])/i)
@@ -208,6 +216,7 @@ def check_for_issues(solidity_file)
 
 		# high issues
 		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && n_loop > 0
+		issues[:msgvalue_in_loop] = issues[:msgvalue_in_loop].to_s + format if line.match?(/msg\.value/) && n_loop > 0
 		## arbitrary_from_in_transferFrom
 		if line.match?(/\btransferFrom\s*\(/) || line.match?(/\bsafeTransferFrom\s*\(/)
 			# Extracting the first argument within parentheses
@@ -459,7 +468,7 @@ begin
 
 	directories = dir_entries.select { |entry| File.directory?(entry) && !['.','..'].include?(entry) }
 
-	puts "Projects in the current directory:"
+	puts "Subdirectories in the current directory:"
 	directories.each_with_index do |dir, index|
 		if index == directories.length - 1
 			puts "\e[93m└─\e[0m " + dir
@@ -472,6 +481,20 @@ begin
 	print "\e[93m┌─\e[0m Enter a directory:\n\e[93m└─\e[0m "
 	directory = gets.chomp
 
+	print "\e[93m┌─\e[0m Enter the path of the out-of-scope file [leave blank if not needed]:\n\e[93m└─\e[0m "
+	out_of_scope_file = gets.chomp
+
+	out_of_scope_paths = []
+
+	# Read the out-of-scope paths from the file and remove the './' prefix (if there is)
+	if !out_of_scope_file.empty? && File.exist?(out_of_scope_file)
+		out_of_scope_paths = File.readlines(out_of_scope_file).map do |line|
+			line.chomp.start_with?(/\.\//) ? line.chomp.sub(/^\.\//, '') : line.chomp
+		end
+	end
+
+	puts out_of_scope_paths
+
 	start_time = Time.now
 
 	if File.exist?(directory) && File.directory?(directory)
@@ -480,7 +503,16 @@ begin
 
 		Find.find(directory) do |path|
 			begin
-				sol_files << { path: path, contents: File.read(path) } if File.file?(path) && File.extname(path) == '.sol'
+
+				if File.file?(path) && File.extname(path) == '.sol'
+
+					# Check if the file is out of scope
+					next if out_of_scope_paths.include?(path.sub(/^\.\//, ''))
+
+					sol_files << { path: path, contents: File.read(path) }
+
+				end
+
 			rescue => e
 				puts "\n[\e[31m+\e[0m] ERROR: Error while reading file #{path}: #{e.message}"
 			end
@@ -556,6 +588,7 @@ begin
 			issues_map << {key: :dont_use_assert, title: "\e[32mUse `require` instead of `assert`\e[0m", description: "It is reccomended to use `require` instead of `assert` since the latest, when false, uses up all the remaining gas and reverts all the changes made. Reference: [Require vs Assert in Solidity](https://dev.to/tawseef/require-vs-assert-in-solidity-5e9d).", issues: ""}
 			issues_map << {key: :deprecated_cl_library_function, title: "\e[32mDeprecated ChainLink library function\e[0m", description: "[As per Chainlink's documentation](https://docs.chain.link/data-feeds/api-reference), the contracts use deprecated ChainLink Library functions, it is recommend that you avoid using them.", issues: ""}
 			issues_map << {key: :push_0_pragma, title: "\e[32mSolidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains\e[0m", description: "Solidity compiler version 0.8.20 introduces a bytecode optimization that utilizes PUSH0 opcodes for gas efficiency. However, this may cause deployment issues on EVM implementations, such as certain L2 chains, that do not support PUSH0. It's crucial to consider the target deployment chain's compatibility and select the appropriate Solidity version or adjust the compiler settings to ensure seamless contract deployment.", issues: ""}
+			issues_map << {key: :unused_error, title: "\e[32mDeclared and not used errors in the contract\e[0m", description: "Some errors are declared in the contract but are never used. It is advisable to examine them to ascertain whether they need to be used or possibly comment or delete them.", issues: ""}
 
 			# medium issues
 			issues_map << {key: :single_point_of_control, title: "\e[33mCentralization risk detected: contract has a single point of control\e[0m", description: "Centralization risks are weaknesses that malevolent project creators as well as hostile outside attackers can take advantage of. They may be used in several forms of attacks, including rug pulls. When contracts have a single point of control, contract owners need to be trusted to prevent fraudulent upgrades and money draining since they have privileged access to carry out administrative chores. Some solutions to this issue include implementing timelocks and/or multi signature custody. Reference: [Trusting a Smart Contract Means Trusting Its Owners: Understanding Centralization Risk](https://arxiv.org/html/2312.06510v1), [UK Court Ordered Oasis to Exploit Own Security Flaw to Recover 120k wETH Stolen in Wormhole Hack](https://medium.com/@observer1/uk-court-ordered-oasis-to-exploit-own-security-flaw-to-recover-120k-weth-stolen-in-wormhole-hack-fcadc439ca9d).", issues: ""}
@@ -567,6 +600,8 @@ begin
 			# high issues
 			issues_map << {key: :delegatecall_in_loop, title: "\e[31mUse of `delegatecall` inside of a loop\e[0m", description: "Using `delegatecall` in a payable function within a loop can pose a vulnerability where each call retains the `msg.value` of the initial transaction. This can lead to unexpected behaviors, especially in scenarios involving fund transfers. References: [\"Two Rights Might Make A Wrong\" by samczsun](https://www.paradigm.xyz/2021/08/two-rights-might-make-a-wrong)",issues: ""}
 			issues_map << {key: :arbitrary_from_in_transferFrom, title: "\e[31mArbitrary `from` in `transferFrom` / `safeTransferFrom`\e[0m", description: "Allowing any `from` address to be passed to `transferFrom` (or `safeTransferFrom`) may result in potential loss of funds, as it enables anyone to transfer tokens from the designated address upon approval.", issues: ""}
+			issues_map << {key: :msgvalue_in_loop, title: "\e[31mUse of `msg.value` inside of a loop\e[0m", description: "Using `msg.value` inside a loop can be problematic as the same value will be reused and this can lead to breaking protocol logic depending on the scenario. Reference: \"[Detecting MISO and Opyn's msg.value reuse vulnerability with Slither](https://blog.trailofbits.com/2021/12/16/detecting-miso-and-opyns-msg-value-reuse-vulnerability-with-slither/)\"", issues: ""}
+
 
 			sol_files.each do |sol_file|
 				
