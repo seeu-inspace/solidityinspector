@@ -200,12 +200,12 @@ def check_for_issues(solidity_file)
 		issues[:deprecated_cl_library_function] = issues[:dont_use_assert].to_s + format if line.match?(/\.getTimestamp\(|\.getAnswer\(|\.latestRound\(|\.latestTimestamp\(/)
 		## => unused_error
 		if line.include?("error ")
-            error_name = line.scan(/error (\w+)/).flatten.first
+			error_name = line.scan(/error (\w+)/).flatten.first
 			error_usage_count = lines.count { |l| l.include?(error_name) }
 			if error_usage_count == 1
-                issues[:unused_error] = issues[:unused_error].to_s + format
-            end
-        end
+				issues[:unused_error] = issues[:unused_error].to_s + format
+			end
+		end
 
 		# medium issues
 		issues[:single_point_of_control] = issues[:single_point_of_control].to_s + format if line.match(/( onlyOwner )|( onlyRole\()|( requiresAuth )|(Owned)!?([(, ])|(Ownable)!?([(, ])|(Ownable2Step)!?([(, ])|(AccessControl)!?([(, ])|(AccessControlCrossChain)!?([(, ])|(AccessControlEnumerable)!?([(, ])|(Auth)!?([(, ])|(RolesAuthority)!?([(, ])|(MultiRolesAuthority)!?([(, ])/i)
