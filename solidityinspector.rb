@@ -493,8 +493,6 @@ begin
 		end
 	end
 
-	puts out_of_scope_paths
-
 	start_time = Time.now
 
 	if File.exist?(directory) && File.directory?(directory)
