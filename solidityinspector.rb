@@ -55,6 +55,15 @@ end
 
 
 
+def extract_function_signatures(file_path)
+	file_content = File.read(file_path)
+
+	file_content.scan(/function\s+(\w+)\s*\((.*?)\)\s*(.*?)\s*{.*?}/m)
+				.map { |match| "function #{match[0]}(#{match[1]}) #{match[2]}".gsub(/\s+/, ' ') }
+end
+
+
+
 def extract_pragma_version(solidity_file)
 	pragma_line = solidity_file.split("\n").find { |line| line.start_with?("pragma solidity") }
 	if pragma_line != nil
@@ -369,6 +378,15 @@ def create_report(issues_map, sol_files)
 	report_file.puts "| Filepath | SLOC |\n| --- | --- |\n"
 	sol_files.each do |sol_file|
 		report_file.puts "| #{sol_file[:path]} | #{count_lines_of_code(sol_file[:path])} |\n"
+	end
+	report_file.puts "\n"
+
+	# Summary -> Write "Files analyzed" table
+	report_file.puts "### Functions analyzed\n\n"
+	report_file.puts "| Filepath | function |\n| --- | --- |\n"
+	sol_files.each do |sol_file|
+		function_signatures = extract_function_signatures(sol_file[:path])
+		function_signatures.each { | signature | report_file.puts "| #{sol_file[:path]} | #{signature} |\n" }
 	end
 	report_file.puts "\n"
 
