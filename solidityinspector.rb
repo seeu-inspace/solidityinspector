@@ -383,7 +383,7 @@ def create_report(issues_map, sol_files)
 
 	# Summary -> Write "Files analyzed" table
 	report_file.puts "### Functions analyzed\n\n"
-	report_file.puts "| Filepath | function |\n| --- | --- |\n"
+	report_file.puts "| Filepath | Function |\n| --- | --- |\n"
 	sol_files.each do |sol_file|
 		function_signatures = extract_function_signatures(sol_file[:path])
 		function_signatures.each { | signature | report_file.puts "| #{sol_file[:path]} | #{signature} |\n" }
