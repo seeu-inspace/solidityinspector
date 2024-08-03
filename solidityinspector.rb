@@ -114,7 +114,7 @@ end
 
 
 
-def check_for_issues(solidity_file)
+def check_for_issues(solidity_name, solidity_file)
 	issues = {}
 
 	n_loop = 0
@@ -207,7 +207,7 @@ def check_for_issues(solidity_file)
 		issues[:dont_use_assert] = issues[:dont_use_assert].to_s + format if line.include?("assert(")
 		issues[:deprecated_cl_library_function] = issues[:dont_use_assert].to_s + format if line.match?(/\.getTimestamp\(|\.getAnswer\(|\.latestRound\(|\.latestTimestamp\(/)
 		## => unused_error
-		if line.include?("error ")
+		if line.include?("error ") && !solidity_name.include?("Errors")
 			error_name = line.scan(/error (\w+)/).flatten.first
 			error_usage_count = lines.count { |l| l.include?(error_name) }
 			if error_usage_count == 1
@@ -621,7 +621,7 @@ begin
 
 			sol_files.each do |sol_file|
 				
-				issues_f = check_for_issues(sol_file[:contents])
+				issues_f = check_for_issues(sol_file[:path].to_s, sol_file[:contents])
 				
 				if !issues_f.empty?
 					issues_f.each do |key, value|
@@ -664,5 +664,5 @@ begin
 	end
 
 rescue Exception => e
-	puts "\n[\e[31m+\e[0m] ERROR: #{path}: #{e.message}"
+	puts "\n[\e[31m+\e[0m] ERROR: #{e.message}"
 end
