@@ -665,4 +665,5 @@ begin
 
 rescue Exception => e
 	puts "\n[\e[31m+\e[0m] ERROR: #{e.message}"
+	puts e.backtrace.join("\n")
 end
