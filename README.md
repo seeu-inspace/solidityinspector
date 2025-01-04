@@ -117,8 +117,8 @@ These reports were generated entirely by SolidityInspector without manual review
 
 | Project | Platform | Report |
 | --- | --- | --- |
-| [SolidityToken](https://github.com/seeu-inspace/soliditytoken) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
-| [KittensOnChain](https://github.com/seeu-inspace/KittensOnChain) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
+| SolidityToken (a personal project) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
+| KittensOnChain (a personal project) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
 
 
 ### Detectors
