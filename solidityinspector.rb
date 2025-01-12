@@ -224,6 +224,7 @@ def check_for_issues(solidity_name, solidity_file)
 		issues[:nested_loop] = issues[:nested_loop].to_s + format if ((line.include?("for (") || line.include?("while (")) && line.include?("{")) && n_loop > 1
 		issues[:unchecked_recover] = issues[:unchecked_recover].to_s + format if line.match?(/\.recover\([^)]*\)\s*;/) && !line.match?(/=/)
 		issues[:unchecked_transfer_transferfrom] = issues[:unchecked_transfer_transferfrom].to_s + format if line.match?(/\.(transfer|transferFrom)\([^)]*\)\s*;/) && !line.match?(/=/)
+		issues[:use_of_blocknumber] = issues[:use_of_blocknumber].to_s + format if line.match?(/\bblock\.number\b/)
 
 		# high issues
 		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && n_loop > 0
@@ -616,6 +617,7 @@ begin
 			issues_map << {key: :nested_loop, title: "\e[33mNested loops could lead to Denial of Service\e[0m", description: "Nested loops in Solidity can lead to an exponential increase in gas consumption. This can cause transactions to fail causing a Denial of Service which can compromise the reliability and scalability of the protocol.", issues: ""}
 			issues_map << {key: :unchecked_recover, title: "\e[33mThe output of the `ECDSA.recover` function is not checked\e[0m", description: "The `ECDSA.recover` function [returns `address(0)`](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.1/contracts/cryptography/ECDSA.sol#L28) if the signature provided is invalid and this can result in unintended behavior. Consider check the output and reverting if it is `address(0)`.",issues: ""}
 			issues_map << {key: :unchecked_transfer_transferfrom, title: "\e[33mThe result of the `transfer` or `transferFrom` function is not checked\e[0m", description: "Implementations of ERC20 are not always consistent. On failure, some `transfer` and `transferFrom` implementations might return `false` rather than reverting. To prevent these errors, it is advisable to encapsulate such calls in `require()` instructions.",issues: ""}
+			issues_map << {key: :use_of_blocknumber, title: "\e[33mUse of `block.number` could lead to different results across EVM chains\e[0m", description: "Using `block.number` in Solidity can cause issues on Layer 2 networks like Optimism and Arbitrum due to differences in how block numbers are interpreted. On Optimism, `block.number` reflects the L2 block number, while on Arbitrum, it represents the L1 block number. These discrepancies can lead to logic errors in contracts relying on `block.number` for time-sensitive operations or calculations, making it unsuitable for cross-chain deployments.",issues: ""}
 
 			# high issues
 			issues_map << {key: :delegatecall_in_loop, title: "\e[31mUse of `delegatecall` inside of a loop\e[0m", description: "Using `delegatecall` in a payable function within a loop can pose a vulnerability where each call retains the `msg.value` of the initial transaction. This can lead to unexpected behaviors, especially in scenarios involving fund transfers. References: [\"Two Rights Might Make A Wrong\" by samczsun](https://www.paradigm.xyz/2021/08/two-rights-might-make-a-wrong)",issues: ""}
