@@ -11,7 +11,7 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 17 low, 6 medium and 5 high issue and creates a markdown report containing the analysis results.
+A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 17 low, 7 medium and 5 high issue and creates a markdown report containing the analysis results.
 
 I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er), [Aderyn](https://github.com/Cyfrin/aderyn) and [Slither](https://github.com/crytic/slither) as inspiration.
 
@@ -180,8 +180,11 @@ These reports were generated entirely by SolidityInspector without manual review
 | 53 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
 | 54 | `:nested_loop` | [Nested loops could lead to Denial of Service](https://github.com/seeu-inspace/solidityinspector/wiki#nested-loops-could-lead-to-denial-of-service) | Medium |
 | 55 | `:unchecked_recover` | [The output of the `ECDSA.recover` function is not checked](https://github.com/seeu-inspace/solidityinspector/wiki#the-output-of-the-ecdsarecover-function-is-not-checked) | Medium |
-| 56 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
-| 57 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
-| 58 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
-| 59 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
-| 60 | `:msgvalue_in_loop` | [Use of `msg.value` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-msgvalue-inside-of-a-loop) | High |
+
+| 56 | `:unchecked_transfer_transferfrom` | [The result of the `transfer` or `transferFrom` function is not checked](https://github.com/seeu-inspace/solidityinspector/wiki#the-result-of-the-transfer-or-transferfrom-function-is-not-checked) | Medium |
+
+| 57 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
+| 58 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
+| 59 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
+| 60 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
+| 61 | `:msgvalue_in_loop` | [Use of `msg.value` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-msgvalue-inside-of-a-loop) | High |
