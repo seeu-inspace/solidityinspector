@@ -222,6 +222,7 @@ def check_for_issues(solidity_name, solidity_file)
 		issues[:use_of_cl_lastanswer] = issues[:use_of_cl_lastanswer].to_s + format if line.match?(/\.latestAnswer\(/)
 		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && solidity_file.include?("SafeTransferLib.sol")
 		issues[:nested_loop] = issues[:nested_loop].to_s + format if ((line.include?("for (") || line.include?("while (")) && line.include?("{")) && n_loop > 1
+		issues[:unchecked_recover] = issues[:unchecked_recover].to_s + format if line.match?(/\.recover\([^)]*\)\s*;/) && !line.match?(/=/)
 
 		# high issues
 		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && n_loop > 0
@@ -442,8 +443,8 @@ def create_report(issues_map, sol_files)
 			id_link = "[#{severity}-#{'%02d' % position}](##{severity}-#{'%02d' % position}-#{sanitized_title})"
 			
 			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} |" if !is_gas
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | - |" if is_gas && issue[:gas] == 0
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | ~#{issue[:gas] * issue[:instances]} |" if is_gas && issue[:gas] > 0
+			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | - |" if is_gas && issue[:gas].to_i == 0
+			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | ~#{issue[:gas] * issue[:instances]} |" if is_gas && issue[:gas].to_i > 0
 
 		end
 
@@ -612,6 +613,7 @@ begin
 			issues_map << {key: :use_of_cl_lastanswer, title: "\e[33mUse of the deprecated `latestAnswer` function in contracts\e[0m", description: "[As per Chainlink's documentation](https://docs.chain.link/data-feeds/api-reference#latestanswer), the `latestAnswer` function is no longer recommended for use. This function does not generate an error in case no answer is available; instead, it returns 0, which could lead to inaccurate prices being provided to various price feeds or potentially result in a Denial of Service. It is recommended to use [`latestRoundData()`](https://docs.chain.link/data-feeds/api-reference#latestrounddata).", issues: ""}
 			issues_map << {key: :solmate_not_safe, title: "\e[33mSafeTransferLib.sol does not check if a token is a contract or not\e[0m", description: "[As per Solmate's SafeTransferLib.sol](https://github.com/transmissions11/solmate/blob/main/src/utils/SafeTransferLib.sol#L9), the contract does not verify the existence of the token contract, delegating this responability to the caller. This creates the possiblity for a honeypot attack. An example is the [Qubit Finance hack in January 2022](https://www.halborn.com/blog/post/explained-the-qubit-hack-january-2022). Consider using [OpenZeppelin's SafeERC20](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#SafeERC20) instead.", issues: ""}
 			issues_map << {key: :nested_loop, title: "\e[33mNested loops could lead to Denial of Service\e[0m", description: "Nested loops in Solidity can lead to an exponential increase in gas consumption. This can cause transactions to fail causing a Denial of Service which can compromise the reliability and scalability of the protocol.", issues: ""}
+			issues_map << {key: :unchecked_recover, title: "\e[33mThe output of the `ECDSA.recover` function is not checked\e[0m", description: "The `ECDSA.recover` function [returns `address(0)`](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.1/contracts/cryptography/ECDSA.sol#L28) if the signature provided is invalid and this can result in unintended behavior. Consider check the output and reverting if it is `address(0)`.",issues: ""}
 
 			# high issues
 			issues_map << {key: :delegatecall_in_loop, title: "\e[31mUse of `delegatecall` inside of a loop\e[0m", description: "Using `delegatecall` in a payable function within a loop can pose a vulnerability where each call retains the `msg.value` of the initial transaction. This can lead to unexpected behaviors, especially in scenarios involving fund transfers. References: [\"Two Rights Might Make A Wrong\" by samczsun](https://www.paradigm.xyz/2021/08/two-rights-might-make-a-wrong)",issues: ""}
