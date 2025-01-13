@@ -11,7 +11,7 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 17 low, 8 medium and 5 high issue and creates a markdown report containing the analysis results.
+A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 17 low, 9 medium and 5 high issue and creates a markdown report containing the analysis results.
 
 I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er), [Aderyn](https://github.com/Cyfrin/aderyn) and [Slither](https://github.com/crytic/slither) as inspiration.
 
@@ -182,8 +182,9 @@ These reports were generated entirely by SolidityInspector without manual review
 | 55 | `:unchecked_recover` | [The output of the `ECDSA.recover` function is not checked](https://github.com/seeu-inspace/solidityinspector/wiki#the-output-of-the-ecdsarecover-function-is-not-checked) | Medium |
 | 56 | `:unchecked_transfer_transferfrom` | [The result of the `transfer` or `transferFrom` function is not checked](https://github.com/seeu-inspace/solidityinspector/wiki#the-result-of-the-transfer-or-transferfrom-function-is-not-checked) | Medium |
 | 57 | `:use_of_blocknumber` | [Use of `block.number` could lead to different results across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-blocknumber-could-lead-to-different-results-across-evm-chains) | Medium |
-| 58 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
-| 59 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
-| 60 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
-| 61 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
-| 62 | `:msgvalue_in_loop` | [Use of `msg.value` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-msgvalue-inside-of-a-loop) | High |
+| 58 | `:stale_check_missing` | [Stale Oracle Data Validation Missing in Contract Logic](https://github.com/seeu-inspace/solidityinspector/wiki#stale-oracle-data-validation-missing-in-contract-logic) | Medium 
+| 59 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
+| 60 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
+| 61 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
+| 62 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
+| 63 | `:msgvalue_in_loop` | [Use of `msg.value` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-msgvalue-inside-of-a-loop) | High |
