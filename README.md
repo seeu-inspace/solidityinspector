@@ -11,7 +11,7 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 17 low, 9 medium and 5 high issue and creates a markdown report containing the analysis results.
+A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 16 low, 10 medium and 5 high issue and creates a markdown report containing the analysis results.
 
 I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er), [Aderyn](https://github.com/Cyfrin/aderyn) and [Slither](https://github.com/crytic/slither) as inspiration.
 
@@ -163,18 +163,18 @@ These reports were generated entirely by SolidityInspector without manual review
 | 36 | `:deprecated_oz_library_functions` | [Deprecated OpenZeppelin library functions](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-openzeppelin-library-functions) | Low |
 | 37 | `:abiencoded_dynamic` | [Avoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-abiencodepacked-instead-of-bytesconcat-for-solidity-version--084) | Low |
 | 38 | `:transfer_ownership` | [Use `safeTransferOwnership` instead of the `transferOwnership` method](https://github.com/seeu-inspace/solidityinspector/wiki#use-safetransferownership-instead-of-the-transferownership-method) | Low |
-| 39 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Low |
-| 40 | `:draft_openzeppelin` | [Draft OpenZeppelin dependencies](https://github.com/seeu-inspace/solidityinspector/wiki#draft-openzeppelin-dependencies) | Low |
-| 41 | `:use_of_blocktimestamp` | [Timestamp dependency: use of `block.timestamp` (or `now`)](https://github.com/seeu-inspace/solidityinspector/wiki#timestamp-dependency-use-of-blocktimestamp-or-now) | Low |
-| 42 | `:calls_in_loop` | [Usage of calls inside of loop](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-calls-inside-of-loop) | Low |
-| 43 | `:outdated_pragma` | [Outdated Compiler Version](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-compiler-version) | Low |
-| 44 | `:ownableupgradeable` | [Use `Ownable2StepUpgradeable` instead of `OwnableUpgradeable` contract](https://github.com/seeu-inspace/solidityinspector/wiki#use-ownable2stepupgradeable-instead-of-ownableupgradeable-contract) | Low |
-| 45 | `:ecrecover_addr_zero` | [`ecrecover()` does not check for `address(0)`](https://github.com/seeu-inspace/solidityinspector/wiki#ecrecover-does-not-check-for-address0) | Low |
-| 46 | `:dont_use_assert` | [Use `require` instead of `assert`](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low |
-| 47 | `:deprecated_cl_library_function` | [Deprecated ChainLink library function](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-chainlink-library-function) | Low |
-| 48 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity--0820-push0-opcode-incompatibility-across-evm-chains) | Low |
-| 49 | `:unused_error` | [Declared and not used errors in the contract](https://github.com/seeu-inspace/solidityinspector/wiki#declared-and-not-used-errors-in-the-contract) | Low |
-| 50 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
+| 39 | `:draft_openzeppelin` | [Draft OpenZeppelin dependencies](https://github.com/seeu-inspace/solidityinspector/wiki#draft-openzeppelin-dependencies) | Low |
+| 40 | `:use_of_blocktimestamp` | [Timestamp dependency: use of `block.timestamp` (or `now`)](https://github.com/seeu-inspace/solidityinspector/wiki#timestamp-dependency-use-of-blocktimestamp-or-now) | Low |
+| 41 | `:calls_in_loop` | [Usage of calls inside of loop](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-calls-inside-of-loop) | Low |
+| 42 | `:outdated_pragma` | [Outdated Compiler Version](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-compiler-version) | Low |
+| 43 | `:ownableupgradeable` | [Use `Ownable2StepUpgradeable` instead of `OwnableUpgradeable` contract](https://github.com/seeu-inspace/solidityinspector/wiki#use-ownable2stepupgradeable-instead-of-ownableupgradeable-contract) | Low |
+| 44 | `:ecrecover_addr_zero` | [`ecrecover()` does not check for `address(0)`](https://github.com/seeu-inspace/solidityinspector/wiki#ecrecover-does-not-check-for-address0) | Low |
+| 45 | `:dont_use_assert` | [Use `require` instead of `assert`](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low |
+| 46 | `:deprecated_cl_library_function` | [Deprecated ChainLink library function](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-chainlink-library-function) | Low |
+| 47 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity--0820-push0-opcode-incompatibility-across-evm-chains) | Low |
+| 48 | `:unused_error` | [Declared and not used errors in the contract](https://github.com/seeu-inspace/solidityinspector/wiki#declared-and-not-used-errors-in-the-contract) | Low |
+| 49 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
+| 50 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Low |
 | 51 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
 | 52 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
 | 53 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
