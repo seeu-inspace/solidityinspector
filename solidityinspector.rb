@@ -139,6 +139,8 @@ def check_for_issues(solidity_name, solidity_file)
 
 	lines.each_with_index do |line, index|
 
+		next unless line
+
 		# template to add an issue:		issues[:KEY] = issues[:KEY].to_s + format if CONDITION
 		format = "\n::#{index + 1} => #{line}"
 
@@ -209,7 +211,7 @@ def check_for_issues(solidity_name, solidity_file)
 		## => unused_error
 		if line.include?("error ") && !solidity_name.include?("Errors")
 			error_name = line.scan(/error (\w+)/).flatten.first
-			error_usage_count = lines.count { |l| l.include?(error_name) }
+			error_usage_count = lines.count { |l| error_name && l.include?(error_name) }
 			if error_usage_count == 1
 				issues[:unused_error] = issues[:unused_error].to_s + format
 			end
