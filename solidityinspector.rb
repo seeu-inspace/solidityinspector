@@ -469,7 +469,7 @@ def create_report(issues_map, sol_files)
 				report_file.puts "#### Instances (#{(issue[:issues].scan '=>').count})\n\n"
 			end
 			
-			report_file.puts "```JavaScript#{issue[:issues]}\n```\n\n"
+			report_file.puts "```Solidity#{issue[:issues]}\n```\n\n"
 		end
 
 		report_file.puts "\n"
