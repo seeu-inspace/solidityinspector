@@ -197,7 +197,7 @@ def check_for_issues(solidity_name, solidity_file)
 		end
 		# :: low issues ::
 		issues[:empty_body] = issues[:empty_body].to_s + format if line.match?(/(\{\})|(\{ \})/i) && !line.include?("//") && !line.include?("receive()")
-		issues[:unsafe_erc20_operations] = issues[:unsafe_erc20_operations].to_s + format if line.match?(/\.transferFrom\(|\.increaseAllowance\(|\.decreaseAllowance\(/)
+		issues[:unsafe_erc20_operations] = issues[:unsafe_erc20_operations].to_s + format if line.match?(/\.transferFrom\(|\.transfer\(|\.approve\(|\.increaseAllowance\(|\.decreaseAllowance\(/)
 		issues[:deprecated_oz_library_functions] = issues[:deprecated_oz_library_functions].to_s + format if line.match?(/_setupRole\(|safeApprove\(|tokensOf\(/)		
 		issues[:abiencoded_dynamic] = issues[:abiencoded_dynamic].to_s + format if line.include?("abi.encodePacked(") && line.include?("keccak256(")
 		issues[:transfer_ownership] = issues[:transfer_ownership].to_s + format if line.match?(/\.transferOwnership\(/)
