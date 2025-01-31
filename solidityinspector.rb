@@ -3,8 +3,6 @@
 require 'find'
 require 'json'
 
-
-
 def logo
 	result = ""
 	lines = [ " __                     ___       _",
@@ -49,17 +47,20 @@ def count_lines_of_code(file_path)
 	file.each_line do |line|
 		lines_count += 1 if !line.strip.empty? && !is_comment?(line)
 	end
-	file&.close
 	return lines_count
 end
 
 
 
 def extract_function_signatures(file_path)
-	file_content = File.read(file_path)
-
-	file_content.scan(/function\s+(\w+)\s*\((.*?)\)\s*(.*?)\s*{.*?}/m)
-				.map { |match| "function #{match[0]}(#{match[1]}) #{match[2]}".gsub(/\s+/, ' ') }
+	begin
+		file_content = File.read(file_path)
+		file_content.scan(/function\s+(\w+)\s*\((.*?)\)\s*(.*?)\s*{.*?}/m)
+								.map { |match| "function #{match[0]}(#{match[1]}) #{match[2]}".gsub(/\s+/, ' ') }
+	rescue => e
+		puts "\n[\e[31m+\e[0m] ERROR: Error reading file #{file_path}: #{e.message}"
+		[]
+	end
 end
 
 
@@ -75,22 +76,59 @@ end
 
 
 
-def check_dependencies_issues(dependencies, issues_map)
-	if dependencies
-		if dependencies['@openzeppelin/contracts']
-			openzeppelin_version = dependencies['@openzeppelin/contracts']
-			major, minor, patch = openzeppelin_version.gsub(/[\^<>!=]/, '').split(".")
-			if major.to_i < 4 || (major.to_i == 4 && (minor.to_i < 9 || (minor.to_i == 9 && patch.to_i < 5)))
-				issues_map << {key: :outdated_openzeppelin_contracts, title: "\e[31mOutdated version of openzeppelin-contracts\e[0m", description: "Implementing an outdated version of `@openzeppelin/contracts`, specifically prior to version 4.9.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts/security).", issues: "\n::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version}"}
-			end
-		end
+def count_element_usage(file_path, element)
+	count = 0
+	File.foreach(file_path) do |line|
+		count += 1 if line.include?(element)
+	end
+	count
+end
 
-		if dependencies['@openzeppelin/contracts-upgradeable']
-			openzeppelin_version = dependencies['@openzeppelin/contracts-upgradeable']
-			major, minor, patch = openzeppelin_version.gsub(/[\^<>!=]/, '').split(".")
-			if major.to_i < 4 || (major.to_i == 4 && (minor.to_i < 9 || (minor.to_i == 9 && patch.to_i < 5)))
-				issues_map << {key: :outdated_openzeppelin_contracts_upgradeable, title: "\e[31mOutdated version of openzeppelin-contracts-upgradeable\e[0m", description: "Implementing an outdated version of `@openzeppelin/contracts-upgradeable`, specifically prior to version 4.9.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/security).", issues: "\n::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version}"}
-			end
+
+
+def version_compare?(version, threshold, comparison_type)
+	major, minor, patch = version.split('.').map(&:to_i)
+  
+	case comparison_type
+	when :less_than
+		major < threshold[0] || 
+		(major == threshold[0] && (minor < threshold[1] || 
+		(minor == threshold[1] && patch < threshold[2])))
+	when :more_than
+		major > threshold[0] || 
+		(major == threshold[0] && (minor > threshold[1] || 
+		(minor == threshold[1] && patch > threshold[2])))
+	else
+		raise ArgumentError, "Invalid comparison type. Use :less_than or :more_than."
+	end
+end
+
+
+
+def check_dependencies_issues(dependencies, issues_map)
+	return unless dependencies
+
+	if dependencies['@openzeppelin/contracts']
+		openzeppelin_version = dependencies['@openzeppelin/contracts'].gsub(/[\^<>!=]/, '')
+		if version_compare?(openzeppelin_version, [4, 9, 5], :less_than)
+			issues_map << {
+				key: :outdated_openzeppelin_contracts,
+				title: "\e[31mOutdated version of openzeppelin-contracts\e[0m",
+				description: "Implementing an outdated version of `@openzeppelin/contracts`, specifically prior to version 4.9.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts/security).",
+				issues: "\n::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version}"
+			}
+		end
+	end
+
+	if dependencies['@openzeppelin/contracts-upgradeable']
+		openzeppelin_version = dependencies['@openzeppelin/contracts-upgradeable'].gsub(/[\^<>!=]/, '')
+		if version_compare?(openzeppelin_version, [4, 9, 5], :less_than)
+			issues_map << {
+				key: :outdated_openzeppelin_contracts_upgradeable,
+				title: "\e[31mOutdated version of openzeppelin-contracts-upgradeable\e[0m",
+				description: "Implementing an outdated version of `@openzeppelin/contracts-upgradeable`, specifically prior to version 4.9.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/security).",
+				issues: "\n::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version}"
+			}
 		end
 	end
 end
@@ -98,51 +136,54 @@ end
 
 
 def check_openzeppelin_version(directory, issues_map)
+	package_json_path = nil
 
-	package_json_path = File.join(directory, 'package.json')
-
-	if File.exist?(package_json_path)
-
-		package_json = JSON.parse(File.read(package_json_path))
-
-		check_dependencies_issues(package_json['devDependencies'], issues_map)
-		check_dependencies_issues(package_json['dependencies'], issues_map)
-
+	Find.find(directory) do |path|
+		if File.basename(path) == 'package.json'
+			package_json_path = path
+			break
+		end
 	end
 
+	if package_json_path && File.exist?(package_json_path)
+		begin
+			package_json = JSON.parse(File.read(package_json_path))
+			check_dependencies_issues(package_json['devDependencies'], issues_map)
+			check_dependencies_issues(package_json['dependencies'], issues_map)
+		rescue => e
+			puts "\n[\e[31m+\e[0m] ERROR: Error reading or parsing #{package_json_path}: #{e.message}"
+		end
+	end
 end
 
 
 
-def check_for_issues(solidity_name, solidity_file)
+def check_for_issues(solidity_name, solidity_file_path)
 	issues = {}
 
 	n_loop = 0
 
-	pragma_version = extract_pragma_version(solidity_file)
-
-	major, minor, patch = pragma_version.gsub(/[\^<>!=]/, '').split(".")
+	pragma_version = extract_pragma_version(File.read(solidity_file_path))
+	pragma_version_clean = pragma_version.gsub(/[\^<>!=]/, '')
 
 	#gas issues
-	issues[:use_recent_solidity] = issues[:use_recent_solidity].to_s + "\n => pragma solidity " + pragma_version + ";" if (minor.to_i < 8 || ( minor.to_i == 8 && patch.to_i < 10)) && pragma_version != "no_version_found"
+	issues[:use_recent_solidity] = issues[:use_recent_solidity].to_s + "\n => pragma solidity " + pragma_version + ";" if version_compare?(pragma_version_clean, [0, 8, 10], :less_than) && pragma_version != "no_version_found"
 
 	# qa issues
 	# :: non-critical issues ::
-	issues[:missing_spdx] = " => The Solidity file is missing the SPDX-License-Identifier" if !solidity_file.include?("SPDX-License-Identifier")
+	issues[:missing_spdx] = " => The Solidity file is missing the SPDX-License-Identifier" if !File.read(solidity_file_path).include?("SPDX-License-Identifier")
 	# :: low issues ::
 	issues[:unspecific_compiler_version_pragma] = " => pragma solidity " + pragma_version + ";" if pragma_version.include?("<") || pragma_version.include?(">") || pragma_version.include?(">=") || pragma_version.include?("<=") || pragma_version.include?("^")
-	issues[:outdated_pragma] = issues[:outdated_pragma].to_s + " => #{pragma_version}" if (minor.to_i < 8 || ( minor.to_i == 8 && patch.to_i < 10)) && pragma_version != "no_version_found"
-	issues[:push_0_pragma] = issues[:push_0_pragma].to_s + " => #{pragma_version}" if (minor.to_i > 8 || ( minor.to_i == 8 && patch.to_i > 19)) && pragma_version != "no_version_found"
+	issues[:outdated_pragma] = issues[:outdated_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 10], :less_than) && pragma_version != "no_version_found"
+	issues[:push_0_pragma] = issues[:push_0_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 19], :more_than) && pragma_version != "no_version_found" # da integrare con version_more_than
 
 
-	lines = solidity_file.split("\n")
-
-	lines.each_with_index do |line, index|
+	File.foreach(solidity_file_path).with_index do |line, index|
 
 		next unless line
 
 		# template to add an issue:		issues[:KEY] = issues[:KEY].to_s + format if CONDITION
-		format = "\n::#{index + 1} => #{line}"
+		format = "::#{index + 1} => #{line}"
 
 		issues[:todo_unfinished_code] = issues[:todo_unfinished_code].to_s + format if line =~ /todo|to do/i
 
@@ -161,16 +202,16 @@ def check_for_issues(solidity_name, solidity_file)
 		issues[:long_revert_string] = issues[:long_revert_string].to_s + format if line =~ /'[\w\d\s]{33,}'/ || line =~ /"[\w\d\s]{33,}"/
 		issues[:postfix_increment] = issues[:postfix_increment].to_s + format if line.include?("++") || line.include?("--")
 		issues[:non_constant_or_immutable_variables] = issues[:non_constant_or_immutable_variables].to_s + format if (line.match?(/(uint[0-9]*[[:blank:]][a-z,A-Z,0-9]*.?=.?;)|(bool.[a-z,A-Z,0-9]*.?=.?;)/) || line.match?(/.?=.?;/) && line.start_with?(/uint[0-9]*[[:blank:]][a-z,A-Z,0-9]/)) && !line.match?(/immutable|constant/) && !line.include?("function")
-		issues[:public_function] = issues[:public_function].to_s + format if line.include?("function") && line.include?("public") && (minor.to_i < 6 || ( minor.to_i == 6 && patch.to_i < 9)) && pragma_version != "no_version_found"
+		issues[:public_function] = issues[:public_function].to_s + format if line.include?("function") && line.include?("public") && version_compare?(pragma_version_clean, [0, 6, 9], :less_than) && pragma_version != "no_version_found"
 		issues[:revert_function_not_payable] = issues[:revert_function_not_payable].to_s + format if (line.match?(/only/) && line.include?("function") && (line.include?("external") || line.include?("public"))) && !line.include?("payable")
 		issues[:assembly_address_zero] = issues[:assembly_address_zero].to_s + format if line.include?("address(0)")
 		issues[:assert_instead_of_require] = issues[:assert_instead_of_require].to_s + format if line.include?("assert(")
 		issues[:small_uints] = issues[:small_uints].to_s + format if line.match?(/\buint(\d{1,2})\b|\bint(\d{1,2})\b/) && ($1.to_i < 32 || $2.to_i < 32) && line.include?("=")
 		issues[:use_selfbalance] = issues[:use_selfbalance].to_s + format if line.include?("address(this).balance")
-		issues[:use_immutable] = issues[:use_immutable].to_s + format if line.include?("keccak256(") && line.include?("constant") && (minor.to_i < 6 || ( minor.to_i == 6 && patch.to_i < 12)) && pragma_version != "no_version_found"
+		issues[:use_immutable] = issues[:use_immutable].to_s + format if line.include?("keccak256(") && line.include?("constant") && version_compare?(pragma_version_clean, [0, 6, 12], :less_than) && pragma_version != "no_version_found"
 		issues[:use_require_andand] = issues[:use_require_andand].to_s + format if line.include?("require(") && line.include?("&&")
 		issues[:math_gas_cost] = issues[:math_gas_cost].to_s + format if line.include?("-=") || line.include?("+=")
-		issues[:postfix_increment_unchecked] = issues[:postfix_increment_unchecked].to_s + format if (line.include?("++") || line.include?("--")) && !line.include?("unchecked{") && (minor.to_i > 8 || ( minor.to_i == 8 && patch.to_i >= 0)) && (line.include?("while") || line.include?("for")) && pragma_version != "no_version_found"
+		issues[:postfix_increment_unchecked] = issues[:postfix_increment_unchecked].to_s + format if (line.include?("++") || line.include?("--")) && !line.include?("unchecked{") && version_compare?(pragma_version_clean, [0, 8, 0], :more_than) && (line.include?("while") || line.include?("for")) && pragma_version != "no_version_found"
 		issues[:superfluous_event_fields] = issues[:superfluous_event_fields].to_s + format if (line.match?(/timestamp/) || line.include?("block.timestamp") || line.include?("block.number")) && line.include?("event")
 		issues[:bool_equals_bool] = issues[:bool_equals_bool].to_s + format if line.include?("==") && (line.include?("false") || line.include?("true"))
 		issues[:strict_comparison] = issues[:strict_comparison].to_s + format if (line.include?(">") || line.include?("<")) && !line.include?("=")
@@ -189,7 +230,7 @@ def check_for_issues(solidity_name, solidity_file)
 			function_name = line.match(/function\s+(\w+)\s*\(/)&.captures&.first
 			if function_name
 				# Count the occurrences of the function name in the contract
-				function_usage_count = lines.count { |l| l.include?(function_name) }
+				function_usage_count = count_element_usage(solidity_file_path, function_name)
 				if function_usage_count == 1
 					issues[:public_func_not_used_internally] = issues[:public_func_not_used_internally].to_s + format
 				end
@@ -209,9 +250,9 @@ def check_for_issues(solidity_name, solidity_file)
 		issues[:dont_use_assert] = issues[:dont_use_assert].to_s + format if line.include?("assert(")
 		issues[:deprecated_cl_library_function] = issues[:dont_use_assert].to_s + format if line.match?(/\.getTimestamp\(|\.getAnswer\(|\.latestRound\(|\.latestTimestamp\(/)
 		## => unused_error
-		if line.include?("error ") && !solidity_name.include?("Errors")
+		if line.include?("error ") && !solidity_name.include?("Error")
 			error_name = line.scan(/error (\w+)/).flatten.first
-			error_usage_count = lines.count { |l| error_name && l.include?(error_name) }
+			error_usage_count = count_element_usage(solidity_file_path, error_name)
 			if error_usage_count == 1
 				issues[:unused_error] = issues[:unused_error].to_s + format
 			end
@@ -222,7 +263,7 @@ def check_for_issues(solidity_name, solidity_file)
 		issues[:use_safemint] = issues[:use_safemint].to_s + format if line.match?(/_mint\(/)
 		issues[:use_safemint_msgsender] = issues[:use_safemint_msgsender].to_s + format if line.match?(/_mint\(/) && line.include?("msg.sender")
 		issues[:use_of_cl_lastanswer] = issues[:use_of_cl_lastanswer].to_s + format if line.match?(/\.latestAnswer\(/)
-		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && solidity_file.include?("SafeTransferLib.sol")
+		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && File.read(solidity_file_path).include?("SafeTransferLib.sol")
 		issues[:nested_loop] = issues[:nested_loop].to_s + format if ((line.include?("for (") || line.include?("while (")) && line.include?("{")) && n_loop > 1
 		issues[:unchecked_recover] = issues[:unchecked_recover].to_s + format if line.match?(/\.recover\([^)]*\)\s*;/) && !line.match?(/=/)
 		issues[:unchecked_transfer_transferfrom] = issues[:unchecked_transfer_transferfrom].to_s + format if line.match?(/\.(transfer|transferFrom)\([^)]*\)\s*;/) && !line.match?(/=/)
@@ -560,7 +601,7 @@ begin
 
 			# gas issues
 			issues_map << {key: :bool_storage_overhead, title: "\e[37mUsing bools for storage incurs overhead\e[0m", description: "Use uint256 for true/false to avoid a Gwarmaccess (100 gas), and to avoid Gsset (20000 gas) when changing from ‘false’ to ‘true’, after having been ‘true’ in the past. This can save 17100 gas per instance. Reference: [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/58f635312aa21f947cae5f8578638a85aa2519f5/contracts/security/ReentrancyGuard.sol#L23-L27).", issues: "", gas: 17100}
-			issues_map << {key: :cache_array_outside_loop, title: "\e[37mArray length not cached outside of loop\e[0m", description: "Caching the length eliminates the additional `DUP<N>` required to store the stack offset and converts each of them to a `DUP<N>`. Gas saved: 3 per instance. Reference: [[G‑14] `<array>`.length should not be looked up in every loop of a for-loop](https://code4rena.com/reports/2022-12-backed/#g14--arraylength-should-not-be-looked-up-in-every-loop-of-a-for-loop).", issues: "", gas: 3}
+			issues_map << {key: :cache_array_outside_loop, title: "\e[37mArray length not cached outside of loop\e[0m", description: "Caching the length eliminates the additional `DUP<N>` required to store the stack offset and converts each of them to a `DUP<N>`. Gas saved: 3 per instance. Reference: [[G‑14] `<array>`.length should not be looked up in every loop of a for-loop](https://code4rena.com/reports/2022-12-backed/#g14--arraylength-should-not-be-looked-up-in-every-loop-of-a-for-loop).", issues: "", gas: 3}
 			issues_map << {key: :default_variable_initialization, title: "\e[37mVariables initialized with default value\e[0m", description: "When a variable is not set / initialized, it's assumed to have the default value. This means that explicitly initialize a variable with its default value wastes gas. Reference: [Solidity tips and tricks to save gas and reduce bytecode size](https://mudit.blog/solidity-tips-and-tricks-to-save-gas-and-reduce-bytecode-size/).", issues: "", gas: 0}
 			issues_map << {key: :shift_instead_of_divmul, title: "\e[37mMissing implementation Shift Right/Left for division and multiplication\e[0m", description: "The `SHR` opcode only utilizes 3 gas, compared to the 5 gas used by the `DIV` opcode. Additionally, shifting is used to get around Solidity's division operation's division-by-0 prohibition. Reference: [EVM Opcodes](https://www.evm.codes/).", issues: "", gas: 2}
 			issues_map << {key: :use_diff_from_0, title: "\e[37mUnsigned integer comparison with `> 0`\e[0m", description: "Comparisons done using `!= 0` are cheaper than `> 0` when dealing with unsigned integer types. Reference: [A Collection of Gas Optimisation Tricks - #7 by pcaversaccio](https://forum.openzeppelin.com/t/a-collection-of-gas-optimisation-tricks/19966/7).", issues: "", gas: 0}
@@ -588,7 +629,7 @@ begin
 			issues_map << {key: :require_revert_missing_descr, title: "\e[92m`require()`/`revert()` statements should have descriptive reason strings\e[0m", description: "To increase overall code clarity and aid in debugging whenever a need is not met, think about adding precise, informative error messages to all `require` and `revert` statements. References: [Error handling: Assert, Require, Revert and Exceptions](https://docs.soliditylang.org/en/v0.8.17/control-structures.html#error-handling-assert-require-revert-and-exceptions), [Missing error messages in require statements | Opyn Bull Strategy Contracts Audit](https://blog.openzeppelin.com/opyn-bull-strategy-contracts-audit/#missing-error-messages-in-require-statements).", issues: ""}
 			issues_map << {key: :unnamed_return_params, title: "\e[92mUnnamed return parameters\e[0m", description: "To increase explicitness and readability, take into account introducing and utilizing named return parameters. Reference: [Unnamed return parameters | Opyn Bull Strategy Contracts Audit](https://blog.openzeppelin.com/opyn-bull-strategy-contracts-audit/#unnamed-return-parameters).", issues: ""}
 			issues_map << {key: :use_of_abi_encodepacked, title: "\e[92mUsage of `abi.encodePacked` instead of `bytes.concat()` for Solidity version `>= 0.8.4`\e[0m", description: "From the Solidity version `0.8.4` it was added the possibility to use `bytes.concat` with variable number of `bytes` and `bytesNN` arguments. With a more evocative name, it functions as a restricted `abi.encodePacked`. References: [Solidity 0.8.4 Release Announcement](https://blog.soliditylang.org/2021/04/21/solidity-0.8.4-release-announcement/), [Remove abi.encodePacked #11593](https://github.com/ethereum/solidity/issues/11593).", issues: ""}
-			issues_map << {key: :make_modern_import, title: "\e[92mFor modern and more readable code; update import usages\e[0m", description: "To be sure to only import what you need, use specific imports using curly brackets. Reference: [[N-03] For modern and more readable code; update import usages | PoolTogether contest](https://code4rena.com/reports/2022-12-pooltogether#n-03-for-modern-and-more-readable-code-update-import-usages).", issues: ""}
+			issues_map << {key: :make_modern_import, title: "\e[92mFor modern and more readable code; update import usages\e[0m", description: "To be sure to only import what you need, use specific imports using curly brackets. Reference: [[N-03] For modern and more readable code; update import usages | PoolTogether contest](https://code4rena.com/reports/2022-12-pooltogether#n-03-for-modern-and-more-readable-code-update-import-usages).", issues: ""}
 			issues_map << {key: :todo_unfinished_code, title: "\e[92mCode base comments with TODOs\e[0m", description: "Consider keeping track of all TODO comments in the backlog of issues and connecting each inline TODO to the related item. Before deploying to a production environment, all TODOs must be completed. Reference: [TODO comments in the code base | zkSync Layer 1 Audit](https://blog.openzeppelin.com/zksync-layer-1-audit/#todo-comments-in-the-code-base).", issues: ""}
 			issues_map << {key: :missing_spdx, title: "\e[92m`SPDX-License-Identifier` missing\e[0m", description: "Missing license agreements (`SPDX-License-Identifier`) may result in lawsuits and improper forms of use of code. Reference: [Missing license identifier | UMA DVM 2.0 Audit](https://blog.openzeppelin.com/uma-dvm-2-0-audit/#missing-license-identifier).", issues: ""}
 			issues_map << {key: :file_missing_pragma, title: "\e[92mFile is missing pragma\e[0m", description: "Without a pragma statement, the smart contract may encounter compatibility issues with future compiler versions, leading to unpredictable behavior. Reference: [[N‑08] File is missing version pragma | ENS Contest Code4rena](https://code4rena.com/reports/2022-07-ens#n08-file-is-missing-version-pragma).", issues: ""}
@@ -599,7 +640,7 @@ begin
 			issues_map << {key: :unspecific_compiler_version_pragma, title: "\e[32mCompiler version Pragma is non-specific\e[0m", description: "For non-library contracts, floating pragmas may be a security risk for application implementations, since a known vulnerable compiler version may accidentally be selected or security tools might fallback to an older compiler version ending up checking a different EVM compilation that is ultimately deployed on the blockchain. References: [Version Pragma | Solidity documents](https://docs.soliditylang.org/en/latest/layout-of-source-files.html#version-pragma), [4.6 Unspecific compiler version pragma | Consensys Audit of 1inch Liquidity Protocol](https://consensys.net/diligence/audits/2020/12/1inch-liquidity-protocol/#unspecific-compiler-version-pragma).", issues: ""}
 			issues_map << {key: :unsafe_erc20_operations, title: "\e[32mUnsafe ERC20 operations\e[0m", description: "ERC20 operations might not be secure due to multiple implementations and vulnerabilities in the standard. It is advised to use OpenZeppelin's SafeERC20 or, at least, wrap each operation in a `require` statement. References: [L001 - Unsafe ERC20 Operation(s)](https://github.com/byterocket/c4-common-issues/blob/main/2-Low-Risk.md#l001---unsafe-erc20-operations), [ERC20 OpenZeppelin documentation, contracts/IERC20.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L43).", issues: ""}
 			issues_map << {key: :deprecated_oz_library_functions, title: "\e[32mDeprecated OpenZeppelin library functions\e[0m", description: "The contracts use deprecated OpenZeppelin Library functions, it is recommend that you avoid using them. References: [openzeppelin-contracts/issues/1064](https://github.com/OpenZeppelin/openzeppelin-contracts/issues/1064), [[L-1] Do not use deprecated library functions](https://gist.github.com/Picodes/ab2df52379e4b4993709be1b91aab651#l-1-do-not-use-deprecated-library-functions).", issues: ""}
-			issues_map << {key: :abiencoded_dynamic, title: "\e[32mAvoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function\e[0m", description: "Instead of using `abi.encodePacked()` use `abi.encode()`. It will pad items to 32 bytes, which will prevent [hash collisions](https://docs.soliditylang.org/en/v0.8.13/abi-spec.html#non-standard-packed-mode). It is possible to cast to `bytes()` or `bytes32()` in place of `abi.encodePacked()` when there is just one parameter, see \"[how to compare strings in solidity?](https://ethereum.stackexchange.com/questions/30912/how-to-compare-strings-in-solidity#answer-82739)\". `bytes.concat()` should be used if all parameters are strings or bytes. Reference: [[L-1] abi.encodePacked() should not be used with dynamic types when passing the result to a hash function such as keccak256()](https://gist.github.com/GalloDaSballo/39b929e8bd48704b9d35b448aaa29480#l-1--abiencodepacked-should-not-be-used-with-dynamic-types-when-passing-the-result-to-a-hash-function-such-as-keccak256).", issues: ""}
+			issues_map << {key: :abiencoded_dynamic, title: "\e[32mAvoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function\e[0m", description: "Instead of using `abi.encodePacked()` use `abi.encode()`. It will pad items to 32 bytes, which will prevent [hash collisions](https://docs.soliditylang.org/en/v0.8.13/abi-spec.html#non-standard-packed-mode). It is possible to cast to `bytes()` or `bytes32()` in place of `abi.encodePacked()` when there is just one parameter, see \"[how to compare strings in solidity?](https://ethereum.stackexchange.com/questions/30912/how-to-compare-strings-in-solidity#answer-82739)\". `bytes.concat()` should be used if all parameters are strings or bytes. Reference: [[L-1] abi.encodePacked() should not be used with dynamic types when passing the result to a hash function such as keccak256()](https://gist.github.com/GalloDaSballo/39b929e8bd48704b9d35b448aaa29480#l-1--abiencodepacked-should-not-be-used-with-dynamic-types-when-passing-the-result-to-a-hash-function-such-as-keccak256).", issues: ""}
 			issues_map << {key: :transfer_ownership, title: "\e[32mUse `safeTransferOwnership` instead of the `transferOwnership` method\e[0m", description: "`transferOwnership` function is used to change ownership. It is reccomended to use a 2 structure `transferOwnership` which is safer, such as `safeTransferOwnership`. Reference: [[L-02] Use safeTransferOwnership instead of transferOwnership function | Caviar contest](https://code4rena.com/reports/2022-12-caviar/#l-02-use-safetransferownership-instead-of-transferownership-function).", issues: ""}
 			issues_map << {key: :draft_openzeppelin, title: "\e[32mDraft OpenZeppelin dependencies\e[0m", description: "OpenZeppelin draft contracts may not have undergone sufficient security auditing or are subject to change as a result of upcoming development. Reference: [[L-02] Draft OpenZeppelin Dependencies | prePO contest](https://code4rena.com/reports/2022-12-prepo/#l-02-draft-openzeppelin-dependencies).", issues: ""}
 			issues_map << {key: :use_of_blocktimestamp, title: "\e[32mTimestamp dependency: use of `block.timestamp` (or `now`)\e[0m", description: "The timestamp of a block is provided by the miner who mined the block. As a result, the timestamp is not guaranteed to be accurate or to be the same across different nodes in the network. In particular, an attacker can potentially mine a block with a timestamp that is favorable to them, known as \"selective packing\". For example, an attacker could mine a block with a timestamp that is slightly in the future, allowing them to bypass a time-based restriction in a smart contract that relies on `block.timestamp`. This could potentially allow the attacker to execute a malicious action that would otherwise be blocked by the restriction. It is reccomended to, instead, use an alternative timestamp source, such as an oracle, that is not susceptible to manipulation by a miner. References: [Timestamp dependence | Solidity Best Practices for Smart Contract Security](https://consensys.net/blog/developers/solidity-best-practices-for-smart-contract-security/), [What Is Timestamp Dependence?](https://halborn.com/what-is-timestamp-dependence/).", issues: ""}
@@ -632,7 +673,7 @@ begin
 
 			sol_files.each do |sol_file|
 				
-				issues_f = check_for_issues(sol_file[:path].to_s, sol_file[:contents])
+				issues_f = check_for_issues(sol_file[:path].to_s, sol_file[:path])
 				
 				if !issues_f.empty?
 					issues_f.each do |key, value|
