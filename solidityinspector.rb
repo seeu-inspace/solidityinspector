@@ -221,7 +221,7 @@ def check_for_issues(solidity_name, solidity_file_path)
 		# :: non-critical issues ::
 		issues[:require_revert_missing_descr] = issues[:require_revert_missing_descr].to_s + format if line.match?(/require\(|revert\(/) && !line.include?("\"")
 		issues[:unnamed_return_params] = issues[:unnamed_return_params].to_s + format if line.include?("function") && line.include?("returns") && !line.end_with?(";")
-		issues[:use_of_abi_encodepacked] = issues[:use_of_abi_encodepacked].to_s + format if line.match?(/abi.encodePacked\(/) && (minor.to_i > 8 || (minor.to_i == 8 && patch.to_i >= 4)) && pragma_version != "no_version_found"
+		issues[:use_of_abi_encodepacked] = issues[:use_of_abi_encodepacked].to_s + format if line.match?(/abi.encodePacked\(/) && version_compare?(openzeppelin_version, [0, 8, 4], :more_than) && pragma_version != "no_version_found"
 		issues[:make_modern_import] = issues[:make_modern_import].to_s + format if line.include?("import") && !line.include?("{")
 		issues[:file_missing_pragma] = issues[:file_missing_pragma].to_s + " => no_version_found" if pragma_version == "no_version_found"
 		issues[:magic_numbers] = issues[:magic_numbers].to_s + format if (line.match?(/\b\d{2,}\b/) || line.match?(/-?\d\.?\d*[Ee][+\-]?\d+/) || line.match?(/\b\d{1,3}(?:_\d{3})+\b/)) && !line.include?("pragma") && !line.include?("int")
