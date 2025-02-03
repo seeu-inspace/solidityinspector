@@ -180,10 +180,12 @@ def check_for_issues(solidity_name, solidity_file_path)
 
 	File.foreach(solidity_file_path).with_index do |line, index|
 
+		line = line.strip
+
 		next unless line
 
 		# template to add an issue:		issues[:KEY] = issues[:KEY].to_s + format if CONDITION
-		format = "::#{index + 1} => #{line}"
+		format = "\n::#{index + 1} => #{line}"
 
 		issues[:todo_unfinished_code] = issues[:todo_unfinished_code].to_s + format if line =~ /todo|to do/i
 
