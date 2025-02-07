@@ -115,10 +115,21 @@ Analysis executed in 0.005374072 seconds
 
 These reports were generated entirely by SolidityInspector without manual review.
 
-| Project | Platform | Report |
-| --- | --- | --- |
-| SolidityToken (a personal project) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
-| KittensOnChain (a personal project) | GitHub | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
+| Project | Report |
+| ------- | ------ |
+| SolidityToken (a personal project) | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
+| KittensOnChain (a personal project) | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
+
+
+These are results obtained during contests using SolidityInspector.
+
+| Project | Platform | Date | Report | Type | Result |
+| ------- | -------- | ---- | ------ | ---- | ------ |
+| Wenwin | Code4rena | 09 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-03-wenwin#low-risk-and-non-critical-issues) | QA Report | B grade |
+| Ethos Reserve | Code4rena | 07 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-02-ethos#gas-optimizations) | Gas Report | B grade |
+| Popcorn | Code4rena | 07 - 02 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-01-popcorn#low-risk-and-non-critical-issues) | QA Report | B grade |
+| RabbitHole Quest Protocol | Code4rena | 30 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-01-rabbithole#low-risk-and-non-critical-issues) | QA Report | B grade |
+| Astaria | Code4rena | 19 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-01-astaria#low-risk-and-non-critical-issues) | QA Report | B grade |
 
 
 ### Detectors
@@ -174,7 +185,7 @@ These reports were generated entirely by SolidityInspector without manual review
 | 47 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity--0820-push0-opcode-incompatibility-across-evm-chains) | Low |
 | 48 | `:unused_error` | [Declared and not used errors in the contract](https://github.com/seeu-inspace/solidityinspector/wiki#declared-and-not-used-errors-in-the-contract) | Low |
 | 49 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
-| 50 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Low |
+| 50 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Medium |
 | 51 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
 | 52 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
 | 53 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
