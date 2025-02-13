@@ -115,10 +115,10 @@ Analysis executed in 0.005374072 seconds
 
 These reports were generated entirely by SolidityInspector without manual review.
 
-| Project | Report |
-| ------- | ------ |
-| SolidityToken (a personal project) | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
-| KittensOnChain (a personal project) | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
+| Project | Date | Report |
+| ------- | ---- | ------ |
+| SolidityToken (a personal project) | 07-07-2024 | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
+| KittensOnChain (a personal project) | 07-07-2024 | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
 
 
 These are results obtained during contests using SolidityInspector.
