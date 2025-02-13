@@ -125,11 +125,11 @@ These are results obtained during contests using SolidityInspector.
 
 | Project | Platform | Date | Report | Type | Result |
 | ------- | -------- | ---- | ------ | ---- | ------ |
-| Wenwin | Code4rena | 09 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-03-wenwin#low-risk-and-non-critical-issues) | QA Report | B grade |
-| Ethos Reserve | Code4rena | 07 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-02-ethos#gas-optimizations) | Gas Report | B grade |
+| Wenwin | Code4rena | 09 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-03-wenwin-findings/issues/485) | QA Report | B grade |
+| Ethos Reserve | Code4rena | 07 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-02-ethos-findings/issues/31) | Gas Report | B grade |
 | Popcorn | Code4rena | 07 - 02 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-01-popcorn-findings/issues/22) | QA Report | B grade |
-| RabbitHole Quest Protocol | Code4rena | 30 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-01-rabbithole#low-risk-and-non-critical-issues) | QA Report | B grade |
-| Astaria | Code4rena | 19 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://code4rena.com/reports/2023-01-astaria#low-risk-and-non-critical-issues) | QA Report | B grade |
+| RabbitHole Quest Protocol | Code4rena | 30 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-01-rabbithole-findings/issues/32) | QA Report | B grade |
+| Astaria | Code4rena | 19 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-01-astaria-findings/issues/128) | QA Report | B grade |
 
 
 ### Detectors
