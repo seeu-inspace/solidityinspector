@@ -3,6 +3,34 @@
 require 'find'
 require 'json'
 
+
+
+TYPE_RANGES = {
+	"uint8" => 2**8 - 1, "uint16" => 2**16 - 1, "uint32" => 2**32 - 1,
+	"uint64" => 2**64 - 1, "uint128" => 2**128 - 1, "uint256" => 2**256 - 1,
+	"int8" => 2**7 - 1, "int16" => 2**15 - 1, "int32" => 2**31 - 1,
+	"int64" => 2**63 - 1, "int128" => 2**127 - 1, "int256" => 2**255 - 1
+}
+
+BUILTIN_SYMBOLS = %w[
+	assert require revert block blockhash gasleft msg now tx this addmod mulmod 
+	keccak256 sha256 sha3 ripemd160 ecrecover selfdestruct suicide abi fallback
+	receive abstract after alias apply auto case catch copyof default define final
+	immutable implements in inline let macro match mutable null of override partial
+	promise reference relocatable sealed sizeof static supports switch try type
+	typedef typeof unchecked
+]
+
+UNISWAP_SWAP_FUNCS = %w[
+	swapExactTokensForTokens swapTokensForExactTokens swapExactETHForTokens
+	swapTokensForExactETH swapExactTokensForETH swapETHForExactTokens
+	swapExactTokensForTokensSupportingFeeOnTransferTokens
+	swapExactETHForTokensSupportingFeeOnTransferTokens
+	swapExactTokensForETHSupportingFeeOnTransferTokens
+]
+
+
+
 def logo
 	result = ""
 	lines = [ " __                     ___       _",
@@ -20,16 +48,16 @@ def logo
 
 	result
 	puts result
-	
+
 	chars = "└───────■ Made with <3 by Riccardo Malatesta (@seeu)".chars
 	chars.each_with_index do |char, index|
 		shade = (index / 8) % 8 + 81
 		print "\e[38;5;#{shade}m#{char}\e[0m"
 		sleep(0.01) 
 	end
-	
+
 	puts "\n\n"
-	
+
 end
 
 
@@ -52,43 +80,26 @@ end
 
 
 
-def extract_function_signatures(file_path)
-	begin
-		file_content = File.read(file_path)
-		file_content.scan(/function\s+(\w+)\s*\((.*?)\)\s*(.*?)\s*{.*?}/m)
-								.map { |match| "function #{match[0]}(#{match[1]}) #{match[2]}".gsub(/\s+/, ' ') }
-	rescue => e
-		puts "\n[\e[31m+\e[0m] ERROR: Error reading file #{file_path}: #{e.message}"
-		[]
-	end
-end
-
-
-
 def extract_pragma_version(solidity_file)
 	pragma_line = solidity_file.split("\n").find { |line| line.start_with?("pragma solidity") }
-	if pragma_line != nil
-		pragma_line.match(/pragma solidity (.*?);/)[1]
-	else
-		"no_version_found"
-	end
+	pragma_line&.match(/pragma\s+solidity\s+(.*?);/)&.[](1) || "no_version_found"
 end
 
 
 
-def count_element_usage(file_path, element)
-	count = 0
-	File.foreach(file_path) do |line|
-		count += 1 if line.include?(element)
-	end
-	count
+def count_element_usage(solidity_file_content, element)
+	solidity_file_content.scan(/#{element}\s*\(/).size
 end
 
 
 
 def version_compare?(version, threshold, comparison_type)
-	major, minor, patch = version.split('.').map(&:to_i)
-  
+	return false if version.nil? || threshold.nil? || threshold.size < 3
+
+	# Ensure version has three parts
+	parts = version.split('.').map(&:to_i)
+	major, minor, patch = parts[0] || 0, parts[1] || 0, parts[2] || 0
+
 	case comparison_type
 	when :less_than
 		major < threshold[0] || 
@@ -115,19 +126,21 @@ def check_dependencies_issues(dependencies, issues_map)
 				key: :outdated_openzeppelin_contracts,
 				title: "\e[31mOutdated version of openzeppelin-contracts\e[0m",
 				description: "Implementing an outdated version of `@openzeppelin/contracts`, specifically prior to version 4.9.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts/security).",
-				issues: "\n::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version}"
+				issues: "\n::package.json => Version of @openzeppelin/contracts is #{openzeppelin_version}",
+				recommendations: "Upgrade to the latest stable version of `@openzeppelin/contracts` (>= 5.2.0). Ensure all contract dependencies remain compatible after the upgrade and thoroughly test the changes before deployment."
 			}
 		end
 	end
 
 	if dependencies['@openzeppelin/contracts-upgradeable']
 		openzeppelin_version = dependencies['@openzeppelin/contracts-upgradeable'].gsub(/[\^<>!=]/, '')
-		if version_compare?(openzeppelin_version, [4, 9, 5], :less_than)
+		if version_compare?(openzeppelin_version, [4, 3, 0], :less_than)
 			issues_map << {
 				key: :outdated_openzeppelin_contracts_upgradeable,
 				title: "\e[31mOutdated version of openzeppelin-contracts-upgradeable\e[0m",
-				description: "Implementing an outdated version of `@openzeppelin/contracts-upgradeable`, specifically prior to version 4.9.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/security).",
-				issues: "\n::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version}"
+				description: "Implementing an outdated version of `@openzeppelin/contracts-upgradeable`, specifically prior to version 4.3.5, introduces multiple high severity issues into the protocol's smart contracts, posing significant security risks. Immediate updating is crucial to mitigate vulnerabilities and uphold the integrity and trustworthiness of the protocol's operations. [Check openzeppelin-contracts public reported and fixed security issues](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/security).",
+				issues: "\n::package.json => Version of @openzeppelin/contracts-upgradeable is #{openzeppelin_version}",
+				recommendations: "Upgrade to the latest stable version of `@openzeppelin/contracts-upgradeable` (>= 5.2.0). Ensure all contract dependencies remain compatible after the upgrade and thoroughly test the changes before deployment."
 			}
 		end
 	end
@@ -158,29 +171,72 @@ end
 
 
 
-def check_for_issues(solidity_name, solidity_file_path)
+def process_files_in_parallel(sol_files, issues_map)
+	mutex = Mutex.new
+	batch_size = [4, sol_files.size].min
+
+	sol_files.each_slice(batch_size) do |batch|
+		threads = batch.map do |sol_file|
+			Thread.new do
+				begin
+					file_path = sol_file[:path]
+					issues = check_for_issues(file_path, sol_file[:contents])
+					
+					mutex.synchronize do
+						issues.each do |key, value|
+							target = issues_map.find { |im| im[:key] == key }
+							next unless target
+							target[:issues] += "\n#{file_path}#{value}"
+						end
+					end
+				rescue => e
+					puts "Error processing #{file_path}: #{e.message}"
+				end
+			end
+		end
+		threads.each(&:join)
+	end
+end
+
+
+
+def check_for_issues(solidity_file_path, solidity_file_content)
+
+	lines = solidity_file_content.split("\n")
+
 	issues = {}
+	loop_depth = 0
+	opening_brackets = 0
+	variables = {}
+	function_name = ""
 
-	n_loop = 0
+	has_payable = false
+	has_withdrawal = false
+	current_function_visibility = nil
+	current_function_payable = false
+	current_function_pure_view = false
+	has_inconsistent_types = false
+	variables_modified_in_function = false
+	current_function_emits_events = false
 
-	pragma_version = extract_pragma_version(File.read(solidity_file_path))
+	pragma_version = extract_pragma_version(solidity_file_content)
 	pragma_version_clean = pragma_version.gsub(/[\^<>!=]/, '')
 
 	#gas issues
-	issues[:use_recent_solidity] = issues[:use_recent_solidity].to_s + "\n => pragma solidity " + pragma_version + ";" if version_compare?(pragma_version_clean, [0, 8, 10], :less_than) && pragma_version != "no_version_found"
+	issues[:use_recent_solidity] = issues[:use_recent_solidity].to_s + " => pragma solidity " + pragma_version + ";" if version_compare?(pragma_version_clean, [0, 8, 10], :less_than) && pragma_version != "no_version_found"
 
 	# qa issues
 	# :: non-critical issues ::
-	issues[:missing_spdx] = " => The Solidity file is missing the SPDX-License-Identifier" if !File.read(solidity_file_path).include?("SPDX-License-Identifier")
+	issues[:missing_spdx] = " => The Solidity file is missing the SPDX-License-Identifier" if !solidity_file_content.include?("SPDX-License-Identifier")
+	issues[:file_missing_pragma] = issues[:file_missing_pragma].to_s + " => no_version_found" if pragma_version == "no_version_found"
+	issues[:safe_math_08] = issues[:safe_math_08].to_s + format if !version_compare?(pragma_version_clean, [0,8,0], :less_than) && solidity_file_content.include?("SafeMath")
 	# :: low issues ::
 	issues[:unspecific_compiler_version_pragma] = " => pragma solidity " + pragma_version + ";" if pragma_version.include?("<") || pragma_version.include?(">") || pragma_version.include?(">=") || pragma_version.include?("<=") || pragma_version.include?("^")
 	issues[:outdated_pragma] = issues[:outdated_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 10], :less_than) && pragma_version != "no_version_found"
 	issues[:push_0_pragma] = issues[:push_0_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 19], :more_than) && pragma_version != "no_version_found" # da integrare con version_more_than
+	issues[:upgradeable_missing_gap] = " => Contract appears upgradeable but missing __gap storage variable" if solidity_file_content.include?("Upgradeable") && !solidity_file_content.include?("__gap")
 
-
-	File.foreach(solidity_file_path).with_index do |line, index|
-
-		line = line.strip
+	lines.each_with_index do |line, index|
 
 		next unless line
 
@@ -188,12 +244,78 @@ def check_for_issues(solidity_name, solidity_file_path)
 		format = "\n::#{index + 1} => #{line}"
 
 		issues[:todo_unfinished_code] = issues[:todo_unfinished_code].to_s + format if line =~ /todo|to do/i
-
+	
 		next if is_comment?(line)
 
-		if (line.include?("for (") || line.include?("while (")) && line.include?("{")
-			n_loop = n_loop + 1
+		# Track function entry/exit and properties
+		if line.include?('function')
+			# Extract visibility and payable status
+			match = line.match(/function\s+(\w+)\s*\((.*?)\)\s*(.*?)\s*{/)
+			if match
+				function_name = match[1]
+				modifiers = match[3].downcase
+	
+				current_function_visibility = modifiers[/public|private|internal|external/, 0] || 'public'
+				current_function_payable = modifiers.include?('payable')
+				current_function_pure_view = modifiers.include?('pure') || modifiers.include?('view')
+
+				# check for issues
+				if current_function_visibility && count_element_usage(solidity_file_content, function_name) <= 1
+					# gas issues
+					issues[:public_function] = issues[:public_function].to_s + format if version_compare?(pragma_version_clean, [0, 6, 9], :less_than) && pragma_version != "no_version_found"
+					# qa issues
+					# :: low issues ::
+					issues[:unused_internal_func] = issues[:unused_internal_func].to_s + format if current_function_visibility == 'internal'
+					issues[:public_func_not_used_internally] = issues[:public_func_not_used_internally].to_s + format if current_function_visibility == 'public'
+				end
+
+				# reset loop counters
+				loop_depth = 0
+				opening_brackets = 0
+
+			else
+				current_function_visibility = 'public'
+				current_function_payable = false
+			end
+		elsif line.include?('}') && current_function_visibility
+
+			# qa issues
+			# :: low issues ::
+			# state_change_no_event
+			if variables_modified_in_function && !current_function_emits_events && function_name != '' && !current_function_pure_view && function_name != 'initialize'
+				issues[:state_change_no_event] = issues[:state_change_no_event].to_s + "\n::=> function #{function_name} lack event emission"
+			end
+
+			current_function_visibility = nil
+			current_function_payable = false
+			current_function_pure_view = false
+			variables_modified_in_function = false
+			current_function_emits_events = false
+
+			# reset loop counters
+			loop_depth = 0
+			opening_brackets = 0
 		end
+
+		# Check for withdrawal operations in public/external functions
+		if current_function_visibility && ['public', 'external'].include?(current_function_visibility)
+			if line.include?('.transfer(') || line.include?('.send(') || line.include?('.call{value:') || line.include?('.call.value(')
+				has_withdrawal = true
+			end
+		end
+
+		# track variables declarations
+		if line =~ /\b(uint\d*|int\d*|bool|address|bytes\d+|string|mapping)\b(?:\s+(?:public|private|internal|constant|memory|storage|calldata))*\s+([a-zA-Z_$]\w*)(?:\s*=\s*[^;]+)?;/
+			var_type = $1
+			var_name = $2
+			variables[var_name] = { 
+				type: var_type, 			# Store var type
+				declared_line: index + 1,	# Store declaration line
+			}
+		end
+
+		loop_depth += 1 if line.match?(/\b(for|while)\s*\(/)
+		opening_brackets +=1 if line.include?("{")
 
 		# gas issues
 		issues[:bool_storage_overhead] = issues[:bool_storage_overhead].to_s + format if line.match?(/(bool.[a-z,A-Z,0-9]*.?=.?)|(bool.[a-z,A-Z,0-9]*.?;)|(=> bool)/) && !line.include?("function") && !line.include?("event")
@@ -201,10 +323,9 @@ def check_for_issues(solidity_name, solidity_file_path)
 		issues[:default_variable_initialization] = issues[:default_variable_initialization].to_s + format if line.match?(/(uint[0-9]*[[:blank:]][a-z,A-Z,0-9]*.?=.?0;)|(bool.[a-z,A-Z,0-9]*.?=.?false;)/) || line.match?(/.?=.?0;/) && line.start_with?(/uint[0-9]*[[:blank:]][a-z,A-Z,0-9]/)
 		issues[:shift_instead_of_divmul] = issues[:shift_instead_of_divmul].to_s + format if line.match?(/\/[2,4,8]|\/ [2,4,8]|\*[2,4,8]|\* [2,4,8]/)
 		issues[:use_diff_from_0] = issues[:use_diff_from_0].to_s + format if line.match?(/>0|> 0/)
-		issues[:long_revert_string] = issues[:long_revert_string].to_s + format if line =~ /'[\w\d\s]{33,}'/ || line =~ /"[\w\d\s]{33,}"/
+		issues[:long_revert_string] = issues[:long_revert_string].to_s + format if (line =~ /'[\w\d\s]{33,}'/ || line =~ /"[\w\d\s]{33,}"/) && !line.include?("keccak256")
 		issues[:postfix_increment] = issues[:postfix_increment].to_s + format if line.include?("++") || line.include?("--")
 		issues[:non_constant_or_immutable_variables] = issues[:non_constant_or_immutable_variables].to_s + format if (line.match?(/(uint[0-9]*[[:blank:]][a-z,A-Z,0-9]*.?=.?;)|(bool.[a-z,A-Z,0-9]*.?=.?;)/) || line.match?(/.?=.?;/) && line.start_with?(/uint[0-9]*[[:blank:]][a-z,A-Z,0-9]/)) && !line.match?(/immutable|constant/) && !line.include?("function")
-		issues[:public_function] = issues[:public_function].to_s + format if line.include?("function") && line.include?("public") && version_compare?(pragma_version_clean, [0, 6, 9], :less_than) && pragma_version != "no_version_found"
 		issues[:revert_function_not_payable] = issues[:revert_function_not_payable].to_s + format if (line.match?(/only/) && line.include?("function") && (line.include?("external") || line.include?("public"))) && !line.include?("payable")
 		issues[:assembly_address_zero] = issues[:assembly_address_zero].to_s + format if line.include?("address(0)")
 		issues[:assert_instead_of_require] = issues[:assert_instead_of_require].to_s + format if line.include?("assert(")
@@ -225,17 +346,40 @@ def check_for_issues(solidity_name, solidity_file_path)
 		issues[:unnamed_return_params] = issues[:unnamed_return_params].to_s + format if line.include?("function") && line.include?("returns") && !line.end_with?(";")
 		issues[:use_of_abi_encodepacked] = issues[:use_of_abi_encodepacked].to_s + format if line.match?(/abi.encodePacked\(/) && version_compare?(pragma_version_clean, [0, 8, 4], :more_than) && pragma_version != "no_version_found"
 		issues[:make_modern_import] = issues[:make_modern_import].to_s + format if line.include?("import") && !line.include?("{")
-		issues[:file_missing_pragma] = issues[:file_missing_pragma].to_s + " => no_version_found" if pragma_version == "no_version_found"
 		issues[:magic_numbers] = issues[:magic_numbers].to_s + format if (line.match?(/\b\d{2,}\b/) || line.match?(/-?\d\.?\d*[Ee][+\-]?\d+/) || line.match?(/\b\d{1,3}(?:_\d{3})+\b/)) && !line.include?("pragma") && !line.include?("int")
-		## => public_func_not_used_internally
-		if line.include?("function") && line.include?("public")
-			function_name = line.match(/function\s+(\w+)\s*\(/)&.captures&.first
-			if function_name
-				# Count the occurrences of the function name in the contract
-				function_usage_count = count_element_usage(solidity_file_path, function_name)
-				if function_usage_count == 1
-					issues[:public_func_not_used_internally] = issues[:public_func_not_used_internally].to_s + format
-				end
+		issues[:costly_loop_operations] = issues[:costly_loop_operations].tot_s + format if loop_depth > 0 && line.match(/[a-zA-Z0-9_]+\s*=\s*.*/) && line.include?("=") && (line.include?(".storage") || line.include?(" sstore"))
+		issues[:empty_blocks] = issues[:empty_blocks].to_s + format if line.match(/\{\s*\}/) && !line.match?(/constructor|receive|fallback|catch|payable/)
+		issues[:large_literals] = issues[:large_literals].to_s + format if line.match(/\b\d{5,}\b/) && !line.include?("0x") && !line.include?("e")
+		issues[:abicoder_v2] = issues[:abicoder_v2].to_s + format if line.match?(/pragma.*abicoder.*v2/i)
+		issues[:abi_encode_unsafe] = issues[:abi_encode_unsafe].to_s + format if line.match?(/(encodeWithSignature|encodeWithSelector)/i)
+		issues[:control_structure_style] = issues[:control_structure_style].to_s + format if line.match?(/\bif\s*\(.*\)\s*[^{]/) && !line.include?("{")
+		issues[:long_lines] = issues[:long_lines].to_s + format if line.length >= 164
+		issues[:mapping_style] = issues[:mapping_style].to_s + format if line.match?(/mapping\s*\(\s/)
+		issues[:hardcoded_address] = issues[:hardcoded_address].to_s + format if line.match?(/0x[a-fA-F0-9]{40}(\)|;)/)
+		issues[:scientific_notation_exponent] = issues[:scientific_notation_exponent].to_s + format if line.match?(/10\s*\*\*\s*\d/i)
+		## => inconsistent_types
+		if line =~ /\b(uint\d*|int\d*)\b/ && !line.include?("function") && !line.include?("returns") # Capture uint/int types
+			var_type = $1
+
+			# Define tracking hash if not initialized
+			seen_types ||= { 'uint' => false, 'uint256' => false, 'int' => false, 'int256' => false }
+
+			# Detect inconsistent types
+			has_inconsistent_types = true if seen_types.values_at('uint', 'uint256').uniq == [true] || seen_types.values_at('int', 'int256').uniq == [true]
+
+			# Mark type as seen
+			seen_types[var_type] = true
+		end
+		# track if we are in a function and a variable has been modified
+		if current_function_visibility
+			variables_modified_in_function = true  && line.match(/\b[a-zA-Z_]\w*\s*=\s*/)
+			current_function_emits_events = true if current_function_visibility && line.match(/emit\s+([\w\.]+)\(/)
+		end
+		# Check if constants are in CONSTANT_CASE
+		if line.match?(/(constant|immutable)\s+([a-zA-Z0-9_]+)/)
+			var_name = $2
+			unless var_name == var_name.upcase
+				issues[:constant_naming] = issues[:constant_naming].to_s + format
 			end
 		end
 		# :: low issues ::
@@ -245,37 +389,48 @@ def check_for_issues(solidity_name, solidity_file_path)
 		issues[:abiencoded_dynamic] = issues[:abiencoded_dynamic].to_s + format if line.include?("abi.encodePacked(") && line.include?("keccak256(")
 		issues[:transfer_ownership] = issues[:transfer_ownership].to_s + format if line.match?(/\.transferOwnership\(/)
 		issues[:draft_openzeppelin] = issues[:draft_openzeppelin].to_s + format if line.include?("import") && line.include?("openzeppelin") && line.include?("draft")
-		issues[:use_of_blocktimestamp] = issues[:use_of_blocktimestamp].to_s + format if line.include?("block.timestamp") || line.include?("now")
-		issues[:calls_in_loop] = issues[:calls_in_loop].to_s + format if line.match?(/\.transfer\(|\.transferFrom\(|\.call|\.delegatecall/) && n_loop > 0
+		issues[:use_of_blocktimestamp] = issues[:use_of_blocktimestamp].to_s + format if line.include?("block.timestamp")
+		issues[:calls_in_loop] = issues[:calls_in_loop].to_s + format if line.match?(/\.transfer\(|\.transferFrom\(|\.call|\.delegatecall/) && loop_depth > 0
 		issues[:ownableupgradeable] = issues[:ownableupgradeable].to_s + format if line.include?("OwnableUpgradeable")
 		issues[:ecrecover_addr_zero] = issues[:ecrecover_addr_zero].to_s + format if line.include?("ecrecover(") && !line.include?("address(0)")
 		issues[:dont_use_assert] = issues[:dont_use_assert].to_s + format if line.include?("assert(")
 		issues[:deprecated_cl_library_function] = issues[:dont_use_assert].to_s + format if line.match?(/\.getTimestamp\(|\.getAnswer\(|\.latestRound\(|\.latestTimestamp\(/)
+		issues[:shadowed_global] = issues[:shadowed_global].to_s + format if ((line =~ /\b(uint\d*|int\d*|bool|address|bytes\d+|string|mapping)\b(?:\s+(?:public|private|internal|constant|memory|storage|calldata))*\s+([a-zA-Z_$]\w*)(?:\s*=\s*[^;]+)?;/ && BUILTIN_SYMBOLS.include?($2)) || (line.start_with?('function') && line =~ /function\s+(\w+)/ && BUILTIN_SYMBOLS.include?($1)))
+		issues[:assembly_in_constant] = issues[:assembly_in_constant].to_s + format if current_function_pure_view && line.include?("assembly")
+		issues[:reverts_in_loops] = issues[:reverts_in_loops].to_s + format if loop_depth > 0 && (line.include?("require(") || line.include?("revert"))
+		issues[:decimals_not_erc20] = issues[:decimals_not_erc20].to_s + format if line.match?(/\.decimals\(\)/)
+		issues[:decimals_not_uint8] = issues[:decimals_not_uint8].to_s + format if line.match?(/uint(?!8)(?!.*(\/\/|;)).*decimals/)
+		issues[:fallback_lacking_payable] = issues[:fallback_lacking_payable].to_s + format if line.match?(/fallback(?!.*payable)/i)
+		issues[:symbol_not_erc20] = issues[:symbol_not_erc20].to_s + format if line.match?(/\.symbol\(\)/)
+		issues[:hardcoded_year] = issues[:hardcoded_year].to_s + format if line.match?(/\byear\s*[=+]\s*365\b/i) && !line.include?("365 days")
+		issues[:dangerous_while_loop] = issues[:dangerous_while_loop].to_s + format if line.match(/while\s*\(\s*true\s*\)/i)
 		## => unused_error
-		if line.include?("error ") && !solidity_name.include?("Error")
+		if line.include?("error ") && !solidity_file_path.include?("Error")
 			error_name = line.scan(/error (\w+)/).flatten.first
-			error_usage_count = count_element_usage(solidity_file_path, error_name)
-			if error_usage_count == 1
+			if count_element_usage(solidity_file_content, error_name) <= 1
 				issues[:unused_error] = issues[:unused_error].to_s + format
 			end
+		end
+		## => uniswap_block_timestamp_deadline
+		if line.match?(/#{UNISWAP_SWAP_FUNCS.join('|')}/)
+			args = line.scan(/\((.*?)\)/).last&.first.to_s.split(',').map(&:strip)
+			issues[:uniswap_block_timestamp_deadline] = issues[:uniswap_block_timestamp_deadline].to_s + format if args.last&.include?("block.timestamp")
 		end
 
 		# medium issues
 		issues[:single_point_of_control] = issues[:single_point_of_control].to_s + format if line.match(/( onlyOwner )|( onlyRole\()|( requiresAuth )|(Owned)!?([(, ])|(Ownable)!?([(, ])|(Ownable2Step)!?([(, ])|(AccessControl)!?([(, ])|(AccessControlCrossChain)!?([(, ])|(AccessControlEnumerable)!?([(, ])|(Auth)!?([(, ])|(RolesAuthority)!?([(, ])|(MultiRolesAuthority)!?([(, ])/i)
 		issues[:use_safemint] = issues[:use_safemint].to_s + format if line.match?(/_mint\(/)
-		issues[:use_safemint_msgsender] = issues[:use_safemint_msgsender].to_s + format if line.match?(/_mint\(/) && line.include?("msg.sender")
 		issues[:use_of_cl_lastanswer] = issues[:use_of_cl_lastanswer].to_s + format if line.match?(/\.latestAnswer\(/)
-		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && File.read(solidity_file_path).include?("SafeTransferLib.sol")
-		issues[:nested_loop] = issues[:nested_loop].to_s + format if ((line.include?("for (") || line.include?("while (")) && line.include?("{")) && n_loop > 1
+		issues[:solmate_not_safe] = issues[:solmate_not_safe].to_s + format if line.match?(/\.safeTransferFrom\(|.safeTransfer\(|\.safeApprove\(/) && solidity_file_content.include?("SafeTransferLib.sol")
+		issues[:nested_loop] = issues[:nested_loop].to_s + format if ((line.include?("for (") || line.include?("while (")) && line.include?("{")) && loop_depth > 1
 		issues[:unchecked_recover] = issues[:unchecked_recover].to_s + format if line.match?(/\.recover\([^)]*\)\s*;/) && !line.match?(/=/)
 		issues[:unchecked_transfer_transferfrom] = issues[:unchecked_transfer_transferfrom].to_s + format if line.match?(/\.(transfer|transferFrom)\([^)]*\)\s*;/) && !line.match?(/=/)
 		issues[:use_of_blocknumber] = issues[:use_of_blocknumber].to_s + format if line.match?(/\bblock\.number\b/)
 		issues[:stale_check_missing] = issues[:stale_check_missing].to_s + format if line.match?(/\.latestRoundData\s*\(/) && line.match?(/\(\s*,\s*int256\s+\w+,\s*,\s*,\s*\)/)
-		
 
 		# high issues
-		issues[:delegatecall_in_loop] = issues[:delegatecall_in_loop].to_s + format if line.match?(/\.delegatecall\(/) && n_loop > 0
-		issues[:msgvalue_in_loop] = issues[:msgvalue_in_loop].to_s + format if line.match?(/msg\.value/) && n_loop > 0
+		issues[:delegatecall_in_loop_payable] = issues[:delegatecall_in_loop_payable].to_s + format if line.match?(/\.delegatecall\(/) && loop_depth > 0 && current_function_payable
+		issues[:msgvalue_in_loop] = issues[:msgvalue_in_loop].to_s + format if line.match?(/msg\.value/) && loop_depth > 0
 		## arbitrary_from_in_transferFrom
 		if line.match?(/\btransferFrom\s*\(/) || line.match?(/\bsafeTransferFrom\s*\(/)
 			# Extracting the first argument within parentheses
@@ -284,13 +439,37 @@ def check_for_issues(solidity_name, solidity_file_path)
 				issues[:arbitrary_from_in_transferFrom] = issues[:arbitrary_from_in_transferFrom].to_s + format
 			end
 		end
+		## detect unsafe casting
+		if line.match(/(\buint\d+|\bint\d+)\s+\w+\s*=\s*(\1)\(.+?\)/)
+			casted_type = $1
+			original_type = $2
+	
+			var_name = line.match(/=\s*#{original_type}\((\w+)\)/i)&.captures&.first
+			original_type = variables.dig(var_name, :type) if var_name
+	
+			issues[:unsafe_casting] = issues[:unsafe_casting].to_s + format if TYPE_RANGES[original_type] && TYPE_RANGES[casted_type] && TYPE_RANGES[casted_type] < TYPE_RANGES[original_type]
+		end
+		issues[:get_dy_underlying_flash_loan] = issues[:get_dy_underlying_flash_loan].to_s + format if line.match?(/get_dy_underlying\(/i)
+		issues[:wsteth_price_steth] = issues[:wsteth_price_steth].to_s + format if line.match?(/(price.*\*.*WstETH.*stEthPerToken|WstETH.*stEthPerToken.*\*.*price)/i)
+		issues[:yul_return_usage] = issues[:yul_return_usage].to_s + format if line.include?("return") && line.match?(/assembly\s*{/)
+		issues[:rtlo_character] = issues[:rtlo_character].to_s + format if line.include?("\u202E")
+		issues[:multiple_retryable_calls] = issues[:multiple_retryable_calls].to_s + format if line.match?(/(createRetryableTicket|outboundTransferCustomRefund|unsafeCreateRetryableTicket)/)
 
-		# check if you are not in a loop anymore
-		if line.include?("}") && n_loop > 0
-			n_loop = n_loop - 1
+		# check if you are not in a loop anymore. This also check if there are more closing brackets than loop_depth
+		opening_brackets -= 1 if line.include?("}") && loop_depth < opening_brackets
+		if line.match("}") && loop_depth == opening_brackets && loop_depth > 0
+			loop_depth -= 1
+			opening_brackets -= 1
 		end
 
+
 	end
+
+	# Add issue if payable exists but no withdrawal
+	issues[:contract_locks_ether] = " => Contract can accept Ether but lacks a withdrawal function" if has_payable && !has_withdrawal
+
+	# Add inconsistent type
+	issues[:inconsistent_types] = " => Contract has inconsistent uint/int declarations" if has_inconsistent_types
 
 	issues
 
@@ -299,11 +478,9 @@ end
 
 
 def create_report(issues_map, sol_files)
-
-	# --- PREPARE THE CONTENT OF THE REPORT ---
-
-	# Define categories of issues
-	categories = {
+	buffer = []
+	severity_order = [:high, :medium, :low, :non_critical, :gas]
+	category_titles = {
 		high: "High Issues",
 		medium: "Medium Issues",
 		low: "Low Issues",
@@ -311,217 +488,149 @@ def create_report(issues_map, sol_files)
 		gas: "Gas Issues"
 	}
 
-	# Initialize categories
-	categorized_issues = Hash.new(0)
-
-	# Count issues for each category
-	issues_map.each do |issue_map|
-		next if issue_map[:issues].empty?
-
-		category = :general # Default category if not matched
-
-		if issue_map[:title].include?("\e[37m")
-			category = :gas
-		elsif issue_map[:title].include?("\e[92m")
-			category = :non_critical
-		elsif issue_map[:title].include?("\e[32m")
-			category = :low
-		elsif issue_map[:title].include?("\e[33m")
-			category = :medium
-		elsif issue_map[:title].include?("\e[31m")
-			category = :high
-		end
-
-		categorized_issues[category] += 1
-	end
-
-	# Initialize categories
-	categorized_issues = Hash.new { |hash, key| hash[key] = [] }
-
-	# Initialize counters for each severity category
-	severity_counters = {
-		gas: 0,
-		non_critical: 0,
-		low: 0,
-		medium: 0,
-		high: 0
-	}
-
-	# Categorize issues
-	issues_map.each do |issue_map|
-		next if issue_map[:issues].empty? # Skip if issues are empty
-
-		category = :general # Default category if not matched
-		severity = nil
-
-		if issue_map[:title].include?("\e[37m")
-			category = :gas
-			severity = "G"
-		elsif issue_map[:title].include?("\e[92m")
-			category = :non_critical
-			severity = "NC"
-		elsif issue_map[:title].include?("\e[32m")
-			category = :low
-			severity = "L"
-		elsif issue_map[:title].include?("\e[33m")
-			category = :medium
-			severity = "M"
-		elsif issue_map[:title].include?("\e[31m")
-			category = :high
-			severity = "H"
-		end
-
-		# Increment the severity counter for the current category
-		severity_counters[category] += 1
-
-		# Add issue to the categorized list
-		categorized_issues[category] << {
-			issue: issue_map,
-			severity: severity,
-			position: severity_counters[category]
-		}
-	end
-
-	# Sort issues within each category by severity
-	categorized_issues.each do |category, issues|
-		categorized_issues[category] = issues.sort_by { |item| [item[:severity], item[:position]] }
-	end
-
-
-	### --- CREATE THE REPORT .md FILE ---
-
-	report_file = File.open("solidityinspector_report.md", "w")
-
-	report_file.puts "# SolidityInspector Analysis Report\n\n"
-
-	report_file.puts "This report was generated by [SolidityInspector](https://github.com/seeu-inspace/solidityinspector) a tool made by [Riccardo Malatesta (@seeu)](https://riccardomalatesta.com/). The purpose of this report is to assist in the process of identifying potential security weaknesses and should not be relied upon for any other use.\n\n"
-
-
-	# Write Table of Contents
-	report_file.puts "## Table of Contents\n\n"
-	report_file.puts "- [Summary](#summary)\n\t- [Files analyzed](#files-analyzed)\n\t- [Issues found](#issues-found)"
-
-	categories.keys.each do |category|
-		if categorized_issues[category].any?
-		report_file.puts "- [#{categories[category]}](##{categories[category].downcase.gsub(/\s/, '-')})"
-			categorized_issues[category].each do |issue|
-				issue_title = issue[:issue][:title].gsub(/\e\[\d+m/, '') # Remove ANSI escape codes
-				sanitized_title = issue_title
-				  .downcase					# Convert to lowercase
-				  .delete("`!@#\$%^&*()[]{}|\\\":;'<>,.?~\/")	# Remove most special characters
-				  .gsub(/[^a-z0-9\-]/, '-')			# Replace non-alphanumeric characters with hyphens
-				  .split('-')					# Split the string by hyphens
-				  .reject(&:empty?)				# Remove empty elements (resulting from consecutive hyphens)
-				  .join('-')					# Join the remaining elements back together with a single hyphen
-				report_file.puts "\t- [#{issue[:severity]}-#{'%02d' % issue[:position]} #{issue_title}](##{issue[:severity]}-#{'%02d' % issue[:position]}-#{sanitized_title})"
-			end
-		end
-	end
-
-	report_file.puts "\n"
-
-	# Write "Summary" section
-	report_file.puts "## Summary\n\n"
-
-	# Summary -> Write "Files analyzed" table
-	report_file.puts "### Files analyzed\n\n"
-	report_file.puts "| Filepath | SLOC |\n| --- | --- |\n"
-	sol_files.each do |sol_file|
-		report_file.puts "| #{sol_file[:path]} | #{count_lines_of_code(sol_file[:path])} |\n"
-	end
-	report_file.puts "\n"
-
-	# Summary -> Write "Files analyzed" table
-	report_file.puts "### Functions analyzed\n\n"
-	report_file.puts "| Filepath | Function |\n| --- | --- |\n"
-	sol_files.each do |sol_file|
-		function_signatures = extract_function_signatures(sol_file[:path])
-		function_signatures.each { | signature | report_file.puts "| #{sol_file[:path]} | #{signature} |\n" }
-	end
-	report_file.puts "\n"
-
-	# Summary -> Write "Issues found" table
-	report_file.puts "### Issues found\n\n"
-	report_file.puts "| Category | Number of issues found |\n| --- | --- |\n"
-
-
-	# Write counts for each category to the report
-	categories.keys.each do |category|
-		report_file.puts "| #{categories[category]} | #{severity_counters[category]} |\n" if severity_counters[category] > 0
-	end
-
-	report_file.puts "\n"
-
-	# Write categorized issues to the report in the desired order
-	categories.keys.each do |category|
-		next if categorized_issues[category].empty?
-
-		is_gas = false
+	# --- Preprocessing Phase ---
+	issues_map.each do |issue|
+		issue[:instances] = issue[:issues].scan(/::\d{1,3}|=>/).count
+		issue[:total_gas] = (issue[:gas] || 0) * issue[:instances]
 		
-		if category.to_s == 'gas'
-			is_gas = true
+		issue[:sanitized_title] = issue[:title].gsub(/\e\[\d+m/, '')
+			.gsub(/([a-z])([A-Z])/, '\1 \2')	# Add space before capital letters
+			.gsub(/[^\w\s-]/, '')
+			.tr(' ', '-')
+			.downcase
+			.squeeze('-')
+
+		issue[:category] = case issue[:title]
+		when /\e\[31m/ then :high
+		when /\e\[33m/ then :medium
+		when /\e\[32m/ then :low
+		when /\e\[92m/ then :non_critical
+		when /\e\[37m/ then :gas
+		else :other
 		end
-
-		report_file.puts "## #{categories[category]}\n\n"
-		
-		# Generate the table header 
-		
-		if is_gas
-			report_file.puts "| ID | Issues | Contexts | Instances | Gas Saved |" 
-			report_file.puts "|----|--------|----------|-----------|-----------|"
-		else 
-			report_file.puts "| ID | Issues | Contexts | Instances |"
-			report_file.puts "|----|--------|----------|-----------|"
-		end
-
-
-		categorized_issues[category].each do |item|
-			issue = item[:issue]
-			severity = item[:severity]
-			position = item[:position]
-			
-			contexts_size = issue[:issues].scan(/\.sol/).size || 0
-			sanitized_title = issue[:title]
-				  .gsub(/\e\[\d+m/, '')				# Remove ANSI escape codes
-				  .downcase					# Convert to lowercase
-				  .delete("`!@#\$%^&*()[]{}|\\\":;'<>,.?~\/")	# Remove most special characters
-				  .gsub(/[^a-z0-9\-]/, '-')			# Replace non-alphanumeric characters with hyphens
-				  .split('-')					# Split the string by hyphens
-				  .reject(&:empty?)				# Remove empty elements (resulting from consecutive hyphens)
-				  .join('-')					# Join the remaining elements back together with a single hyphen
-			id_link = "[#{severity}-#{'%02d' % position}](##{severity}-#{'%02d' % position}-#{sanitized_title})"
-			
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} |" if !is_gas
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | - |" if is_gas && issue[:gas].to_i == 0
-			report_file.puts "| #{id_link} | #{issue[:title].gsub(/\e\[\d+m/, '')} | #{contexts_size} | #{issue[:instances]} | ~#{issue[:gas] * issue[:instances]} |" if is_gas && issue[:gas].to_i > 0
-
-		end
-
-		report_file.puts "\n"
-		
-		categorized_issues[category].each do |item|
-			issue = item[:issue]
-			severity = item[:severity]
-			position = item[:position]
-			
-			report_file.puts "### [#{severity}-#{'%02d' % position}] #{issue[:title].gsub(/\e\[\d+m/, '')}\n\n"
-			report_file.puts "#{issue[:description]}\n\n"
-			if issue[:issues].scan(/::\d{1,3}/).count > 0
-				report_file.puts "#### Instances (#{issue[:issues].scan(/::\d{1,3}/).count})\n\n"
-			else
-				report_file.puts "#### Instances (#{(issue[:issues].scan '=>').count})\n\n"
-			end
-			
-			report_file.puts "```Solidity#{issue[:issues]}\n```\n\n"
-		end
-
-		report_file.puts "\n"
 	end
 
-	## EoF
-	report_file.close
-	puts "\nReport generated: \e[94msolidityinspector_report.md\e[0m"	
+	# --- Data Organization ---
+	categorized = issues_map.group_by { |i| i[:category] }
+		.transform_values { |v| v.reject { |i| i[:issues].empty? } }
+		.select { |k,v| category_titles.key?(k) }
 
+	# --- Report Header ---
+	buffer << "# SolidityInspector Analysis Report\n\n"
+	buffer << "This report was generated by [SolidityInspector](https://github.com/seeu-inspace/solidityinspector), " \
+					"a tool made by [Riccardo Malatesta (@seeu)](https://riccardomalatesta.com/). " \
+					"The purpose of this report is to assist in the process of identifying potential security weaknesses " \
+					"and should not be relied upon for any other use.\n\n"
+
+	# --- Table of Contents ---
+	buffer << "## Table of Contents\n\n"
+	buffer << "- [Summary](#summary)"
+	buffer << "\t- [Files Analyzed](#files-analyzed)"
+	buffer << "\t- [Issues Found](#issues-found)"
+
+	severity_order.each do |cat|
+		next unless categorized.key?(cat)
+		issues = categorized[cat]
+		buffer << "- [#{category_titles[cat]}](##{cat}-issues)"
+		issues.each_with_index do |issue, idx|
+			id_prefix = case cat
+							when :high then "H"
+							when :medium then "M" 
+							when :low then "L"
+							when :non_critical then "NC"
+							when :gas then "G"
+							end
+			id = "#{id_prefix}-#{'%02d' % (idx+1)}:"
+			title = issue[:title].gsub(/\e\[\d+m/, '').gsub(/([a-z])([A-Z])/, '\1 \2')
+			anchor = "#{id.downcase.gsub(':','')}-#{issue[:sanitized_title]}"
+			buffer << "\t- [#{id} #{title}](##{anchor})"
+		end
+	end
+	buffer << "\n"
+
+	# --- Summary Section ---
+	buffer << "## Summary\n\n"
+
+	# Files Analyzed
+	buffer << "### Files Analyzed\n\n"
+	buffer << "| Filepath | SLOC |\n| --- | --- |"
+	sol_files.each { |file| buffer << "| #{file[:path]} | #{count_lines_of_code(file[:path])} |" }
+	buffer << "\n"
+
+	# Issues Found
+	buffer << "### Issues Found\n\n"
+	buffer << "| Category | Number of Issues Found |\n| --- | --- |"
+	severity_order.each do |cat|
+		next unless categorized.key?(cat)
+		issues = categorized[cat]
+		count = issues.count { |i| i[:instances] > 0 }
+		buffer << "| #{category_titles[cat]} | #{count} |" if count > 0
+	end
+	buffer << "\n"
+
+	# --- Category Sections ---
+	severity_order.each do |cat|
+		next unless categorized.key?(cat)
+		issues = categorized[cat]
+		next if issues.empty?
+		total_gas = cat == :gas ? issues.sum { |i| i[:total_gas] } : 0
+
+		buffer << "\n## #{category_titles[cat]}\n\n"
+		
+		# Table Header
+		columns = cat == :gas ? ["ID", "Issue", "Instances", "Gas Saved"] : ["ID", "Issue", "Instances"]
+		buffer << "| #{columns.join(' | ')} |"
+		buffer << "|#{' --- |' * columns.count}"
+
+		# Table Rows
+		issues.each_with_index do |issue, idx|
+			id_prefix = case cat
+							when :high then "H"
+							when :medium then "M" 
+							when :low then "L"
+							when :non_critical then "NC"
+							when :gas then "G"
+							end
+			id = "#{id_prefix}-#{'%02d' % (idx+1)}"
+			title = issue[:title].gsub(/\e\[\d+m/, '').gsub(/([a-z])([A-Z])/, '\1 \2')
+			anchor = "#{id.downcase.gsub(':','')}-#{issue[:sanitized_title]}"
+			title_anchor = "[#{id} #{title}](##{anchor})"
+
+			row = [id, title_anchor, issue[:instances]]
+			row << "~#{issue[:total_gas]}" if cat == :gas
+
+			buffer << "| #{row.join(' | ')} |"
+		end
+
+		# Gas Total
+		if cat == :gas
+			buffer << "| **Total** | | **#{issues.sum { |i| i[:instances] }}** | **~#{total_gas}** |"
+		end
+
+		buffer << "\n"
+
+		# Detailed Findings
+		issues.each_with_index do |issue, idx|
+			id_prefix = case cat
+							when :high then "H"
+							when :medium then "M" 
+							when :low then "L"
+							when :non_critical then "NC"
+							when :gas then "G"
+							end
+			id = "#{id_prefix}-#{'%02d' % (idx+1)}"
+			title = issue[:title].gsub(/\e\[\d+m/, '').gsub(/([a-z])([A-Z])/, '\1 \2')
+
+			buffer << "### #{id}: #{title}\n"
+			buffer << "#{issue[:description]}\n"
+			buffer << "#### Findings\n"
+			buffer << "```solidity#{issue[:issues]}\n```\n"
+			buffer << "#### Recommendations\n\n#{issue[:recommendations]}\n\n"
+		end
+	end
+
+	File.write("solidityinspector_report.md", buffer.join("\n"))
+	puts "\nReport generated: \e[94msolidityinspector_report.md\e[0m"
 end
 
 
@@ -552,6 +661,8 @@ begin
 	print "\e[93m┌─\e[0m Enter the path of the out-of-scope file [leave blank if not needed]:\n\e[93m└─\e[0m "
 	out_of_scope_file = gets.chomp
 
+	start_time = Time.now
+
 	out_of_scope_paths = []
 
 	# Read the out-of-scope paths from the file and remove the './' prefix (if there is)
@@ -561,8 +672,6 @@ begin
 		end
 	end
 
-	start_time = Time.now
-
 	if File.exist?(directory) && File.directory?(directory)
 
 		sol_files = []
@@ -570,14 +679,12 @@ begin
 		Find.find(directory) do |path|
 			begin
 
-				if File.file?(path) && File.extname(path) == '.sol'
+				next unless File.file?(path) && File.extname(path) == '.sol'
 
-					# Check if the file is out of scope
-					next if out_of_scope_paths.include?(path.sub(/^\.\//, ''))
+				# Check if the file is out of scope
+				next if out_of_scope_paths.include?(path.sub(/^\.\//, ''))
 
-					sol_files << { path: path, contents: File.read(path) }
-
-				end
+				sol_files << { path: path, contents: File.read(path) }
 
 			rescue => e
 				puts "\n[\e[31m+\e[0m] ERROR: Error while reading file #{path}: #{e.message}"
@@ -599,94 +706,1375 @@ begin
 
 			issues_map = []
 
-			# template to add an issue:		issues_map << {key: :KEY, title: "\e[37mTITLE\e[0m", description: "",issues: ""}
+			# template to add an issue:		issues_map << {key: :KEY, title: "\e[37mTITLE\e[0m", description: "",issues: "", recommendations: ""}
 
 			# gas issues
-			issues_map << {key: :bool_storage_overhead, title: "\e[37mUsing bools for storage incurs overhead\e[0m", description: "Use uint256 for true/false to avoid a Gwarmaccess (100 gas), and to avoid Gsset (20000 gas) when changing from ‘false’ to ‘true’, after having been ‘true’ in the past. This can save 17100 gas per instance. Reference: [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/58f635312aa21f947cae5f8578638a85aa2519f5/contracts/security/ReentrancyGuard.sol#L23-L27).", issues: "", gas: 17100}
-			issues_map << {key: :cache_array_outside_loop, title: "\e[37mArray length not cached outside of loop\e[0m", description: "Caching the length eliminates the additional `DUP<N>` required to store the stack offset and converts each of them to a `DUP<N>`. Gas saved: 3 per instance. Reference: [[G‑14] `<array>`.length should not be looked up in every loop of a for-loop](https://code4rena.com/reports/2022-12-backed/#g14--arraylength-should-not-be-looked-up-in-every-loop-of-a-for-loop).", issues: "", gas: 3}
-			issues_map << {key: :default_variable_initialization, title: "\e[37mVariables initialized with default value\e[0m", description: "When a variable is not set / initialized, it's assumed to have the default value. This means that explicitly initialize a variable with its default value wastes gas. Reference: [Solidity tips and tricks to save gas and reduce bytecode size](https://mudit.blog/solidity-tips-and-tricks-to-save-gas-and-reduce-bytecode-size/).", issues: "", gas: 0}
-			issues_map << {key: :shift_instead_of_divmul, title: "\e[37mMissing implementation Shift Right/Left for division and multiplication\e[0m", description: "The `SHR` opcode only utilizes 3 gas, compared to the 5 gas used by the `DIV` opcode. Additionally, shifting is used to get around Solidity's division operation's division-by-0 prohibition. Reference: [EVM Opcodes](https://www.evm.codes/).", issues: "", gas: 2}
-			issues_map << {key: :use_diff_from_0, title: "\e[37mUnsigned integer comparison with `> 0`\e[0m", description: "Comparisons done using `!= 0` are cheaper than `> 0` when dealing with unsigned integer types. Reference: [A Collection of Gas Optimisation Tricks - #7 by pcaversaccio](https://forum.openzeppelin.com/t/a-collection-of-gas-optimisation-tricks/19966/7).", issues: "", gas: 0}
-			issues_map << {key: :long_revert_string, title: "\e[37mLong `revert`/`require` string\e[0m", description: "Strings in `require()` / `revert()` longer than 32 bytes cost extra gas. Reference: [require() revert() Strings Longer Than 32 Bytes Cost Extra Gas](https://code4rena.com/reports/2022-12-caviar#g-03-requirerevert-strings-longer-than-32-bytes-cost-extra-gas).", issues: "", gas: 0}
-			issues_map << {key: :postfix_increment, title: "\e[37mPostfix increment/decrement used\e[0m", description: "The prefix increment / decrease expression returns the updated value after it's incremented while the postfix increment / decrease expression returns the original value. Be careful when employing this optimization anytime the return value of the expression is utilized later; for instance, `uint a = i++` and `uint a = ++i` produce different values for `a`. References: [Why does ++i cost less gas than i++?](https://ethereum.stackexchange.com/questions/133161/why-does-i-cost-less-gas-than-i#answer-133164), [Gas Optimizations for the Rest of Us](https://m1guelpf.blog/d0gBiaUn48Odg8G2rhs3xLIjaL8MfrWReFkjg8TmDoM).", issues: "", gas: 0}
-			issues_map << {key: :non_constant_or_immutable_variables, title: "\e[37mVariable not constant/immutable\e[0m", description: "If a variable doesn't need to change, use `constant` or `immutable`. This will avoid the fees due to a `SLOAD` operation. Reference: [Solidity Gas Optimizations pt.2 - Constants](https://dev.to/javier123454321/solidity-gas-optimizations-pt-2-constants-570d).", issues: "", gas: 0}
-			issues_map << {key: :public_function, title: "\e[37mMake function external instead of public\e[0m", description: "Version `0.6.9` removed the restriction on public functions accepting calldata arguments. Public functions for Solidity versions `0.6.9` have to transfer the parameters to memory. Reference: [Public vs External Functions in Solidity | Gustavo (Gus) Guimaraes post](https://gus-tavo-guim.medium.com/public-vs-external-functions-in-solidity-b46bcf0ba3ac), [StackOverflow answer](https://ethereum.stackexchange.com/questions/19380/external-vs-public-best-practices?answertab=active#tab-top).", issues: "", gas: 0}
-			issues_map << {key: :revert_function_not_payable, title: "\e[37mMark payable functions guaranteed to revert when called by normal users\e[0m", description: "If a normal user tries to pay the function and a function modifier, such as onlyOwner, is applied, the function will revert. By making the function payable, valid callers will avoid paying for gas as the compiler won't verify that a payment was made. The extra opcodes avoided are `CALLVALUE(2)`, `DUP1(3)`, `ISZERO(3)`, `PUSH2(3)`, `JUMPI(10)`, `PUSH1(3)`, `DUP1(3)`, `REVERT(0)`, `JUMPDEST(1)`, `POP(2)` which costs an average of about 21 gas per call to the function, in addition to the extra deployment cost. Reference: [[G‑11] Functions guaranteed to revert when called by normal users can be marked](https://code4rena.com/reports/2022-12-backed/#g11--functions-guaranteed-to-revert-when-called-by-normal-users-can-be-marked-payable).", issues: "", gas: 0}
-			issues_map << {key: :assembly_address_zero, title: "\e[37mUse assembly to check for `address(0)`\e[0m", description: "By checking for `address(0)` using assembly language, you can avoid the use of more gas-expensive operations such as calling a smart contract or reading from storage. This can save 6 gas per instance. Reference: [Solidity Assembly: Checking if an Address is 0 (Efficiently)](https://medium.com/@kalexotsu/solidity-assembly-checking-if-an-address-is-0-efficiently-d2bfe071331).", issues: "", gas: 6}
-			issues_map << {key: :assert_instead_of_require, title: "\e[37mUse `require` instead of `assert` when possible\e[0m", description: "If `assert()` returns a false assertion, it compiles to the invalid opcode `0xfe`, which eats up all the gas left and completely undoes the changes. `require()` compiles to `0xfd`, which is the opcode for a `REVERT`, indicating that it will return the remaining gas if it returns a false assertion. Reference: [Assert() vs Require() in Solidity – Key Difference & What to Use](https://codedamn.com/news/solidity/assert-vs-require-in-solidity).", issues: "", gas: 0}
-			issues_map << {key: :small_uints, title: "\e[37mUsage of uints/ints smaller than 32 bytes (256 bits) incurs overhead\e[0m", description: "Gas consumption can be greater if you use items that are less than 32 bytes in size. This is such that the EVM can only handle 32 bytes at once. In order to increase the element's size from 32 bytes to the necessary amount, the EVM must do extra operations if it is lower than that. When necessary, it is advised to utilize a bigger size and then downcast. References: [Layout of State Variables in Storage | Solidity docs](https://docs.soliditylang.org/en/v0.8.11/internals/layout_in_storage.html#layout-of-state-variables-in-storage), [GAS OPTIMIZATIONS ISSUES by Gokberk Gulgun](https://hackmd.io/@W1m6lTsFT5WAy9C_lRTX_g/rkr5Laoys).", issues: "", gas: 0}
-			issues_map << {key: :use_selfbalance, title: "\e[37mUse `selfbalance()` instead of `address(this).balance`\e[0m", description: "The `BALANCE` opcode costs 100 GAS minimum, `SELFBALANCE` costs 5 GAS minimum. References: [BALANCE | EVM Codes](https://www.evm.codes/#31?fork=merge), [SELFBALANCE | EVM Codes](https://www.evm.codes/#47?fork=merge).", issues: "", gas: 0}
-			issues_map << {key: :use_immutable, title: "\e[37mUsage of constant keccak variables results in extra hashing\e[0m", description: "The usage of `constant` for keccak variables results in extra hashing and more gas. You should use `immutable`. This saves about 20 gas. References: [Change Constant to Immutable for keccak Variables | Solidity Gas Optimizations Tricks | by Vladislav Yaroshuk | Better Programming](https://betterprogramming.pub/solidity-gas-optimizations-and-tricks-2bcee0f9f1f2#1e4c), [ethereum/solidity#9232 (comment)](https://github.com/ethereum/solidity/issues/9232#issuecomment-646131646), [Inefficient Hash Constants](https://github.com/seen-haus/seen-contracts/issues/29).", issues: "", gas: 20}
-			issues_map << {key: :use_require_andand, title: "\e[37mSplit `require()` statements that use `&&` to save gas\e[0m", description: "To save gas, it is advised to use two `require` instead of using one `require` with the operator `&&`. This can save 8 gas per instance. Reference: [How to Write Gas Efficient Contracts in Solidity – Yos Riady](https://yos.io/2021/05/17/gas-efficient-solidity/#tip-11-splitting-require-statements-that-use--saves-gas).", issues: "", gas: 8}
-			issues_map << {key: :math_gas_cost, title: "\e[37m`x += y` costs more gas than `x = x + y` for state variables\e[0m", description: "Gas can be saved by substituting the addition operator with plus-equals, same for minus. This can save 10 gas per instance. Reference: [StateVarPlusEqVsEqPlus.md](https://gist.github.com/IllIllI000/cbbfb267425b898e5be734d4008d4fe8).", issues: "", gas: 10}
-			issues_map << {key: :postfix_increment_unchecked, title: "\e[37m`++i/i++` should be `unchecked{++i}`/`unchecked{i++}` when it is not possible for them to overflow\e[0m", description: "In solidity versions `0.8.0` and higher, unchecked saves 30-40 gas per loop. Reference: [[G-02] ++i/i++ Should Be unchecked{++i}/unchecked{i++} When It Is Not Possible For Them To Overflow, As Is The Case When Used In For- And While-loops](https://code4rena.com/reports/2022-12-caviar/#g-02-ii-should-be-uncheckediuncheckedi-when-it-is-not-possible-for-them-to-overflow-as-is-the-case-when-used-in-for--and-while-loops).", issues: "", gas: 30}
-			issues_map << {key: :superfluous_event_fields, title: "\e[37mSuperfluos event fields\e[0m", description: "In the event information, `block.number` and `block.timestamp` are already added by default. Reference: [[G-08] Superfluous event fields](https://code4rena.com/reports/2022-12-caviar/#g-08-superfluous-event-fields).", issues: "", gas: 0}
-			issues_map << {key: :bool_equals_bool, title: "\e[37mUse `if(x)` or `if(!x)` instead of `if (x == bool)`\e[0m", description: "Avoid comparing boolean expressions to boolean literals. This will reduce complexity and gas. Reference: [Don't compare boolean expressions to boolean literals | AuditBase](https://detectors.auditbase.com/boolean-literal-gas-optimization).", issues: "", gas: 0}
-			issues_map << {key: :strict_comparison, title: "\e[37mWhen possible, use non-strict comparison `>=` and/or `=<` instead of `>` `<`\e[0m", description: "Non-strict inequalities are cheaper than strict ones due to some supplementary checks (`ISZERO`, 3 gas). It will save 15–20 gas. Reference: [Solidity Gas Optimizations Tricks](https://betterprogramming.pub/solidity-gas-optimizations-and-tricks-2bcee0f9f1f2).", issues: "", gas: 15}
-			issues_map << {key: :private_rather_than_public, title: "\e[37mIf possible, use private rather than public for constants\e[0m", description: "If necessary, the values can be obtained from the verified contract source code; alternatively, if there are many values, a single getter function that returns a tuple containing the values of all currently-public constants can be used. The compiler doesn't have to write non-payable getter functions for deployment calldata, store the value's bytes somewhere other than where it will be used, or add another entry to the method ID table. This saves 3406-3606 gas in deployment gas. Reference: [[G‑16] Using private rather than public for constants, saves gas](https://code4rena.com/reports/2022-12-backed/#g16--using-private-rather-than-public-for-constants-saves-gas).", issues: "", gas: 3406}
-			issues_map << {key: :use_recent_solidity, title: "\e[37mUse a more recent version of Solidity to save gas\e[0m", description: "Use a version of Solidity at least `0.8.10` to have external calls skip contract existence checks if the external call has a return value (from v `0.8.10`), get custom errors, which are cheaper at deployment than `revert()`/`require()` strings (from v `0.8.4`), get better struct packing and cheaper multiple storage reads (from v `0.8.3`) and get simple compiler automatic inlining (from v `0.8.2`). Reference: [[G-06] Use a more recent version of Solidity](https://code4rena.com/reports/2022-12-backed/#g06--use-a-more-recent-version-of-solidity).", issues: "", gas: 0}
+			issues_map << {
+				key: :bool_storage_overhead,
+				title: "\e[37mAvoid Using Boolean Variables for Storage\e[0m",
+				description: "Storing boolean values (`bool`) in Solidity incurs unnecessary gas costs. Using `uint256` (1 for true, 0 for false) eliminates additional `Gwarmaccess` (100 gas) and prevents costly `Gsset` operations (20,000 gas) when toggling from `false` to `true`. This simple adjustment can save up to 17,100 gas per instance.\n\nReference: [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/58f635312aa21f947cae5f8578638a85aa2519f5/contracts/security/ReentrancyGuard.sol#L23-L27).",
+				issues: "",
+				gas: 17100,
+				recommendations: <<~RECOMMENDATIONS
+				Replace `bool` with `uint256` (1 for true, 0 for false).
+				```solidity
+				// Before
+				bool public isActive = true;
+				
+				// After
+				uint256 public isActive = 1; // 1 = true, 0 = false
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :cache_array_outside_loop,
+				title: "\e[37mCache Array Length Before Looping\e[0m",
+				description: "Failing to cache an array's length before a loop causes Solidity to repeatedly access `arr.length`, leading to redundant stack operations (`DUP<N>`). Storing the length in a variable optimizes execution by reducing stack manipulation, saving 3 gas per instance.",
+				issues: "",
+				gas: 3,
+				recommendations: <<~RECOMMENDATIONS
+				Cache array length before loop.
+				```solidity
+				// Before
+				uint256 length = arr.length;
+				for (uint256 i; i < length; i++) {
+					// ... logic
+				}
+			
+				// After
+				uint256 length = arr.length;
+				for (uint256 i; i < length; ) {
+					// ... logic
+					unchecked { ++i; }
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :default_variable_initialization,
+				title: "\e[37mRemove Explicit Default Value Assignments\e[0m",
+				description: "Solidity automatically initializes variables to their default values. Explicitly setting them (e.g., `uint256 x = 0;`) wastes gas and increases bytecode size. Simply declaring the variable without an explicit assignment removes unnecessary operations.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Remove explicit initialization.
+				```solidity
+				// Before
+				uint256 x = 0;
+				
+				// After
+				uint256 x;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :shift_instead_of_divmul,
+				title: "\e[37mUse Bitwise Shifting Instead of Multiplication and Division\e[0m",
+				description: "Bitwise shifting (`<<` and `>>`) is more gas-efficient than multiplication (`*`) and division (`/`). The `SHR` opcode consumes only 3 gas, whereas `DIV` requires 5 gas. Additionally, shifting can bypass Solidity's division-by-zero restrictions",
+				issues: "",
+				gas: 2,
+				recommendations: <<~RECOMMENDATIONS
+				Use bitwise shifts.
+				```solidity
+				// Before
+				x = y * 8;
+				
+				// After
+				x = y << 3; // Equivalent to y * 2^3
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_diff_from_0,
+				title: "\e[37mPrefer `!= 0` Over `> 0` for Unsigned Integers\e[0m",
+				description: "For unsigned integer comparisons, `!= 0` is cheaper than `> 0`. This minor change reduces gas consumption in conditions and validation checks.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Use `!= 0`.
+				```solidity
+				// Before
+				require(x > 0);
+				
+				// After
+				require(x != 0);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :long_revert_string,
+				title: "\e[37mOptimize `revert` and `require` Strings to Reduce Gas Costs\e[0m",
+				description: "Error messages in `require()` and `revert()` that exceed 32 bytes incur additional gas costs due to how Solidity handles string storage. Using custom errors instead of long revert strings significantly reduces gas consumption and bytecode size.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Use custom errors or shorten strings.
+				```solidity
+				// Before
+				revert("Long error message");
+				
+				// After
+				error ShortError();
+				revert ShortError();
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :postfix_increment,
+				title: "\e[37mPostfix Increment/Decrement Increases Gas Costs\e[0m",
+				description: "Using the prefix (`++i` / `--i`) increment or decrement is more gas-efficient than the postfix (`i++` / `i--`) versions. The prefix form updates the value before returning it, whereas the postfix form first returns the original value and then updates it.\nWhen the return value is not needed, using the prefix version avoids unnecessary storage operations, reducing gas usage. However, ensure correctness when refactoring, as `uint a = i++` and `uint a = ++i` produce different results.\n\nReference: [Why does ++i cost less gas than i++?](https://ethereum.stackexchange.com/questions/133161/why-does-i-cost-less-gas-than-i#answer-133164).",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Use prefix increment.
+				```solidity
+				// Before
+				i++;
+				
+				// After
+				++i;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :non_constant_or_immutable_variables,
+				title: "\e[37mUse `constant` or `immutable` for Unchanging Variables\e[0m",
+				description: "If a variable does not need to change, declaring it as `constant` or `immutable` reduces gas costs by eliminating the need for `SLOAD` operations. `constant` is used for compile-time constants, while `immutable` allows assignment in the constructor but prevents modifications afterward. Using these keywords optimizes storage access and reduces transaction fees.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Add `immutable`/`constant`.
+				```solidity
+				// Before
+				uint256 public value;
+				
+				// After
+				uint256 public immutable value;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :public_function,
+				title: "\e[37mUse `external` Instead of `public` for Functions When Possible\e[0m",
+				description: "Since Solidity `0.6.9`, public functions must transfer calldata parameters to memory, incurring additional gas costs. Using `external` instead avoids unnecessary memory allocation when the function is only called externally. `external` functions cannot be called internally, so ensure they are not required within the contract before making this change.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Change the visibility from `public` to `external`.
+				```solidity
+				// Before
+				function foo() public {}
+				
+				// After
+				function foo() external {}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :revert_function_not_payable,
+				title: "\e[37mMark Functions as `payable` When They Are Guaranteed to Revert for Normal Users\e[0m",
+				description: "If a function has a modifier like `onlyOwner` and would revert when called by a normal user sending ETH, marking it as `payable` optimizes gas usage. Making the function `payable` prevents the compiler from inserting checks to ensure no ETH was sent, avoiding unnecessary opcodes such as `CALLVALUE`, `DUP1`, `ISZERO`, and `REVERT`. This optimization reduces gas costs by approximately 21 gas per call and lowers deployment costs.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Add `payable` to the interested functions.
+				```solidity
+				// Before
+				function withdraw() external onlyOwner {}
+				
+				// After
+				function withdraw() external payable onlyOwner {}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :assembly_address_zero,
+				title: "\e[37mUse Assembly to Check for `address(0)` to Reduce Gas Costs\e[0m",
+				description: "Checking for `address(0)` using Solidity's higher-level syntax incurs additional gas costs due to function calls or storage reads. Using inline assembly is more efficient and can save 6 gas per instance by leveraging the `iszero` opcode directly.",
+				issues: "",
+				gas: 6,
+				recommendations: <<~RECOMMENDATIONS
+				Implement inline assembly check.
+				```solidity
+				// Before
+				require(addr != address(0));
+			
+				// After
+				assembly {
+					if iszero(addr) {
+						revert(0, 0)
+					}
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :assert_instead_of_require,
+				title: "\e[37mUse `require` Instead of `assert` When Possible\e[0m",
+				description: "When `assert()` fails, it triggers the `INVALID` (`0xfe`) opcode, consuming all remaining gas and reverting the transaction entirely. In contrast, `require()` uses the `REVERT` (`0xfd`) opcode, which allows unused gas to be returned. Using `require()` instead of `assert()` where appropriate can prevent unnecessary gas wastage while still enforcing conditions effectively.\n\nReference: [Assert() vs Require() in Solidity - Key Difference & What to Use](https://codedamn.com/news/solidity/assert-vs-require-in-solidity).",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Replace `assert` with `require`.
+				```solidity
+				// Before
+				assert(condition);
+				
+				// After
+				require(condition);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :small_uints,
+				title: "\e[37mUsing `uint` or `int` Smaller Than 32 Bytes Incurs Overhead\e[0m",
+				description: "The Ethereum Virtual Machine (EVM) processes data in 32-byte (256-bit) chunks. When using smaller integer types like `uint8` or `uint16`, the EVM must perform additional operations to adjust the size, leading to higher gas costs. To optimize gas efficiency, use `uint256` unless explicit packing within a struct is required.\n\nReference: [Layout of State Variables in Storage | Solidity Docs](https://docs.soliditylang.org/en/v0.8.11/internals/layout_in_storage.html#layout-of-state-variables-in-storage).",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Use `uint256` unless packing.
+				```solidity
+				// Before
+				uint8 smallVar = 100;
+				
+				// After
+				uint256 normalVar = 100;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_selfbalance,
+				title: "\e[37mUse `selfbalance()` Instead of `address(this).balance` to Reduce Gas Costs\e[0m",
+				description: "The `BALANCE` opcode, used when calling `address(this).balance`, has a minimum gas cost of 100. In contrast, `SELFBALANCE` is a more optimized opcode that only costs 5 gas, making it significantly more efficient for retrieving the contract's balance. Using `selfbalance()` within an inline assembly block minimizes gas costs while achieving the same functionality.\n\nReferences: [BALANCE | EVM Codes](https://www.evm.codes/#31?fork=merge), [SELFBALANCE | EVM Codes](https://www.evm.codes/#47?fork=merge).",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Use `selfbalance` in assembly.
+				```solidity
+				// Before
+				uint256 bal = address(this).balance;
+				
+				// After
+				uint256 bal;
+				assembly { bal := selfbalance() }
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_immutable,
+				title: "\e[37mUsing `constant` for Keccak Variables Causes Extra Hashing and Higher Gas Costs\e[0m",
+				description: "Declaring `keccak256` hash values as `constant` results in additional hashing operations, increasing gas costs. Using `immutable` instead reduces gas consumption by approximately 20 gas, as the hash is computed only once during contract deployment. If the hash value does not need to be known at compile time, prefer `immutable` over `constant` to optimize gas efficiency.",
+				issues: "",
+				gas: 20,
+				recommendations: <<~RECOMMENDATIONS
+				If possible, use `immutable` instead of `constant`.
+				```solidity
+				// Before
+				bytes32 constant HASH = keccak256("hash");
+				
+				// After
+				bytes32 immutable HASH = keccak256("hash");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_require_andand,
+				title: "\e[37mSplitting `require()` Statements That Use `&&` Can Reduce Gas Costs\e[0m",
+				description: "Using a single `require()` statement with the `&&` operator incurs additional gas costs due to stack operations and evaluation logic. Splitting the condition into two separate `require()` statements can save approximately 8 gas per instance by simplifying execution flow.",
+				issues: "",
+				gas: 8,
+				recommendations: <<~RECOMMENDATIONS
+				Split require statements into multiple checks.
+				```solidity
+				// Before
+				require(a && b);
+				
+				// After
+				require(a);
+				require(b);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :math_gas_cost,
+				title: "\e[37mUsing `x = x + y` Instead of `x += y` for State Variables Saves Gas\e[0m",
+				description: "For state variables, using `x += y` or `x -= y` generates additional read and write operations compared to explicitly writing `x = x + y`. This optimization can save approximately 10 gas per instance by reducing unnecessary storage accesses.\n\nReference: [StateVarPlusEqVsEqPlus.md](https://gist.github.com/IllIllI000/cbbfb267425b898e5be734d4008d4fe8).",
+				issues: "",
+				gas: 10,
+				recommendations: <<~RECOMMENDATIONS
+				Use explicit assignment.
+				```solidity
+				// Before
+				x += y;
+				
+				// After
+				x = x + y;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :postfix_increment_unchecked,
+				title: "\e[37mUse `unchecked{++i}` or `unchecked{i++}` When Overflow Is Not Possible\e[0m",
+				description: "Starting from Solidity `0.8.0`, arithmetic operations include overflow checks by default, which increase gas costs. Wrapping increment (`++i` or `i++`) inside an `unchecked` block can save 30-40 gas per loop iteration when it is guaranteed that no overflow can occur.",
+				issues: "",
+				gas: 30,
+				recommendations: <<~RECOMMENDATIONS
+				Wrap the increment operation inside an `unchecked` block when it is certain that no overflow can occur.
+				```solidity
+				for (uint256 i = 0; i < n; ) {
+					unchecked { ++i; }
+					// loop body
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :superfluous_event_fields,
+				title: "\e[37mRemove Redundant Event Fields to Save Gas\e[0m",
+				description: "Including `block.number` or `block.timestamp` as event parameters is unnecessary, as these values are already recorded in the transaction logs by default. Removing them reduces event emission costs without losing essential information.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Remove redundant fields.
+				```solidity
+				// Before
+				event Log(uint256 value, uint256 timestamp);
+				
+				// After
+				event Log(uint256 value); // timestamp is auto-added
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :bool_equals_bool,
+				title: "\e[37mSimplify Boolean Comparisons to Reduce Gas and Complexity\e[0m",
+				description: "Comparing boolean variables to `true` or `false` is unnecessary and adds extra computation. Instead of `if (x == true)`, simply use `if (x)`, and instead of `if (x == false)`, use `if (!x)`. This reduces gas costs and improves code readability.",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Simplify boolean checks.
+				```solidity
+				// Before
+				if (x == true) {}
+				
+				// After
+				if (x) {}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :strict_comparison,
+				title: "\e[37mUse `>=` or `<=` Instead of `>` or `<` to Reduce Gas Costs\e[0m",
+				description: "Non-strict comparisons (`>=` and `<=`) are more gas-efficient than strict comparisons (`>` and `<`) because they avoid additional `ISZERO` checks. This optimization can save 15-20 gas per instance. Adjust thresholds accordingly when making this change.",
+				issues: "",
+				gas: 15,
+				recommendations: <<~RECOMMENDATIONS
+				Use `>=`/`<=`.
+				```solidity
+				// Before
+				require(x > 100);
+				
+				// After
+				require(x >= 101);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :private_rather_than_public,
+				title: "\e[37mUse `private` Instead of `public` for Constants to Reduce Deployment Gas\e[0m",
+				description: "Marking constants as `public` generates an automatic getter function, which increases deployment costs by 3406-3606 gas. Since constant values can be retrieved from the verified contract source or through a dedicated getter function returning multiple values, using `private` avoids unnecessary storage and method ID table entries.",
+				issues: "",
+				gas: 3406,
+				recommendations: <<~RECOMMENDATIONS
+				Mark constants as `private` instead of `public`.
+				```solidity
+				// Before
+				uint256 public constant VALUE = 100;
+				
+				// After
+				uint256 private constant VALUE = 100;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_recent_solidity,
+				title: "\e[37mUse a More Recent Solidity Version to Optimize Gas Usage\e[0m",
+				description: "Upgrading to Solidity `0.8.10` or later provides multiple gas optimizations: skipping contract existence checks for external calls with return values (from `0.8.10`), using cheaper custom errors instead of revert strings (from `0.8.4`), improved struct packing and more efficient multiple storage reads (from `0.8.3`), and automatic compiler inlining (from `0.8.2`).",
+				issues: "",
+				gas: 0,
+				recommendations: <<~RECOMMENDATIONS
+				Update pragma to a more recent version.
+				```solidity
+				// Before
+				pragma solidity ^0.8.0;
+				
+				// After
+				pragma solidity ^0.8.20;
+				```
+				RECOMMENDATIONS
+			}
 
 			# qa issues
 			# :: non-critical issues ::
-			issues_map << {key: :require_revert_missing_descr, title: "\e[92m`require()`/`revert()` statements should have descriptive reason strings\e[0m", description: "To increase overall code clarity and aid in debugging whenever a need is not met, think about adding precise, informative error messages to all `require` and `revert` statements. References: [Error handling: Assert, Require, Revert and Exceptions](https://docs.soliditylang.org/en/v0.8.17/control-structures.html#error-handling-assert-require-revert-and-exceptions), [Missing error messages in require statements | Opyn Bull Strategy Contracts Audit](https://blog.openzeppelin.com/opyn-bull-strategy-contracts-audit/#missing-error-messages-in-require-statements).", issues: ""}
-			issues_map << {key: :unnamed_return_params, title: "\e[92mUnnamed return parameters\e[0m", description: "To increase explicitness and readability, take into account introducing and utilizing named return parameters. Reference: [Unnamed return parameters | Opyn Bull Strategy Contracts Audit](https://blog.openzeppelin.com/opyn-bull-strategy-contracts-audit/#unnamed-return-parameters).", issues: ""}
-			issues_map << {key: :use_of_abi_encodepacked, title: "\e[92mUsage of `abi.encodePacked` instead of `bytes.concat()` for Solidity version `>= 0.8.4`\e[0m", description: "From the Solidity version `0.8.4` it was added the possibility to use `bytes.concat` with variable number of `bytes` and `bytesNN` arguments. With a more evocative name, it functions as a restricted `abi.encodePacked`. References: [Solidity 0.8.4 Release Announcement](https://blog.soliditylang.org/2021/04/21/solidity-0.8.4-release-announcement/), [Remove abi.encodePacked #11593](https://github.com/ethereum/solidity/issues/11593).", issues: ""}
-			issues_map << {key: :make_modern_import, title: "\e[92mFor modern and more readable code; update import usages\e[0m", description: "To be sure to only import what you need, use specific imports using curly brackets. Reference: [[N-03] For modern and more readable code; update import usages | PoolTogether contest](https://code4rena.com/reports/2022-12-pooltogether#n-03-for-modern-and-more-readable-code-update-import-usages).", issues: ""}
-			issues_map << {key: :todo_unfinished_code, title: "\e[92mCode base comments with TODOs\e[0m", description: "Consider keeping track of all TODO comments in the backlog of issues and connecting each inline TODO to the related item. Before deploying to a production environment, all TODOs must be completed. Reference: [TODO comments in the code base | zkSync Layer 1 Audit](https://blog.openzeppelin.com/zksync-layer-1-audit/#todo-comments-in-the-code-base).", issues: ""}
-			issues_map << {key: :missing_spdx, title: "\e[92m`SPDX-License-Identifier` missing\e[0m", description: "Missing license agreements (`SPDX-License-Identifier`) may result in lawsuits and improper forms of use of code. Reference: [Missing license identifier | UMA DVM 2.0 Audit](https://blog.openzeppelin.com/uma-dvm-2-0-audit/#missing-license-identifier).", issues: ""}
-			issues_map << {key: :file_missing_pragma, title: "\e[92mFile is missing pragma\e[0m", description: "Without a pragma statement, the smart contract may encounter compatibility issues with future compiler versions, leading to unpredictable behavior. Reference: [[N‑08] File is missing version pragma | ENS Contest Code4rena](https://code4rena.com/reports/2022-07-ens#n08-file-is-missing-version-pragma).", issues: ""}
-			issues_map << {key: :empty_body, title: "\e[92mConsider commenting why the body of the function is empty\e[0m", description: "The functions shown have an empty body. Consider commenting why for a clearer reading of the code. Reference: [[N-12] Empty blocks should be removed or Emit something](https://code4rena.com/reports/2022-11-non-fungible/#n-12-empty-blocks-should-be-removed-or-emit-something).", issues: ""}
-			issues_map << {key: :magic_numbers, title: "\e[92mMagic Numbers in contract\e[0m", description: "Magic numbers, undefined numeric literals embedded directly into the code, pose a risk to the readability, maintainability, and security of Solidity smart contracts. To mitigate this issue, establish clear constants or variables for numeric values, providing meaningful context and promoting code transparency. Reference: [Magic numbers are used | Forta Protocol Audit](https://blog.openzeppelin.com/forta-protocol-audit#magic-numbers-are-used).", issues: ""}
-			issues_map << {key: :public_func_not_used_internally, title: "\e[92m`public` function not used internally could be marked as `external`\e[0m", description: "`public` functions in a smart contract that aren't actually used within the contract itself could be marked as `external` as they serve no purpose internally.",issues: ""}
+			issues_map << {
+				key: :require_revert_missing_descr,
+				title: "\e[92mAdd Descriptive Reason Strings to `require()` and `revert()` Statements\e[0m",
+				description: "Providing clear error messages in `require()` and `revert()` improves code readability and debugging. When a condition fails, an informative message helps identify the issue quickly, making the contract easier to maintain and troubleshoot.\n\nReference: [Error Handling: Assert, Require, Revert, and Exceptions](https://docs.soliditylang.org/en/v0.8.17/control-structures.html#error-handling-assert-require-revert-and-exceptions).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Include error messages in `require`/`revert` statements.
+				```solidity
+				// Before
+				require(condition);
+
+				// After
+				require(condition, "Condition not met: insufficient balance");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :unnamed_return_params,
+				title: "\e[92mUse Named Return Parameters to Improve Readability\e[0m",
+				description: "Naming return parameters in function declarations increases code clarity and explicitness. It makes function outputs easier to understand and improves maintainability by providing context for returned values.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Name return parameters in function declarations
+				```solidity
+				// Before
+				function getUser() external returns (uint256);
+
+				// After
+				function getUser() external returns (uint256 userId);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_of_abi_encodepacked,
+				title: "\e[92mUse `bytes.concat()` Instead of `abi.encodePacked()` for Solidity ≥ `0.8.4`\e[0m",
+				description: "Starting from Solidity `0.8.4`, `bytes.concat()` provides a more readable alternative to `abi.encodePacked()` for concatenating `bytes` and `bytesNN` arguments. It offers the same functionality with a clearer name, improving code maintainability.\n\nReferences: [Solidity 0.8.4 Release Announcement](https://blog.soliditylang.org/2021/04/21/solidity-0.8.4-release-announcement/), [Remove abi.encodePacked #11593](https://github.com/ethereum/solidity/issues/11593).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Replace `abi.encodePacked` with `bytes.concat` for readability (Solidity ≥0.8.4).
+				```solidity
+				// Before
+				bytes memory data = abi.encodePacked(a, b);
+
+				// After
+				bytes memory data = bytes.concat(a, b);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :make_modern_import,
+				title: "\e[92mUse Explicit Imports for Improved Readability and Efficiency\e[0m",
+				description: "To ensure only the necessary components are imported, use curly braces to specify individual imports. This makes the code more readable and helps avoid unnecessary dependencies.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use explicit imports with curly braces.
+				```solidity
+				// Before
+				import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+				// After
+				import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :todo_unfinished_code,
+				title: "\e[92mRemove or Track `TODO` Comments to Maintain Code Quality\e[0m",
+				description: "Unresolved `TODO` comments should be tracked in an issue backlog to ensure they are addressed before deployment. All `TODOs` must be completed or explicitly managed to prevent unfinished code from reaching production.",
+				issues: "",
+				recommendations: "Remove TODOs or track them in an issue tracker."
+			}
+			issues_map << {
+				key: :missing_spdx,
+				title: "\e[92mAdd `SPDX-License-Identifier` to Avoid Legal and Usage Issues\e[0m",
+				description: "Including an `SPDX-License-Identifier` at the top of each Solidity file clarifies the licensing terms, preventing potential legal disputes and ensuring proper code usage.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Add the SPDX license identifier at the top of each Solidity file.
+				```solidity
+				// SPDX-License-Identifier: MIT
+				pragma solidity ^0.8.20;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :file_missing_pragma,
+				title: "\e[92mAdd a `pragma` Statement to Ensure Compiler Compatibility\e[0m",
+				description: "Without a `pragma` statement, the contract may be compiled with an unintended Solidity version, leading to compatibility issues and unpredictable behavior. Explicitly specifying the Solidity version ensures stability and consistency.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Specify the Solidity version in files missing it.
+				```solidity
+				// Add to the top of the file
+				pragma solidity ^0.8.20;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :empty_body,
+				title: "\e[92mAdd a Comment to Explain Empty Function Bodies\e[0m",
+				description: "If a function has an empty body, include a comment to clarify its purpose. This improves code readability and helps other developers understand the intent behind the function.",
+				issues: "",
+				recommendations: "Add a comment to explain why a function is empty."
+			}
+			issues_map << {
+				key: :magic_numbers,
+				title: "\e[92mReplace Magic Numbers with Named Constants for Better Readability\e[0m",
+				description: "Embedding numeric literals directly into the code reduces readability, maintainability, and security. Instead, define meaningful constants or variables to provide context and improve transparency.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use named constants for numeric values.
+				```solidity
+				// Before
+				uint256 deadline = block.timestamp + 86400;
+
+				// After
+				uint256 constant DAY_IN_SECONDS = 86400;
+				uint256 deadline = block.timestamp + DAY_IN_SECONDS;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :public_func_not_used_internally,
+				title: "\e[92mUse `external` Instead of `public` for Functions Not Called Internally\e[0m",
+				description: "If a `public` function is never used within the contract, changing its visibility to `external` can reduce gas costs and improve contract efficiency. `external` functions are optimized for external calls and do not generate unnecessary internal access overhead.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Change visibility from `public` to `external` if not called internally.
+				```solidity
+				// Before
+				function getBalance() public view returns (uint256) {}
+
+				// After
+				function getBalance() external view returns (uint256) {}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :empty_blocks,
+				title: "\e[92mEmpty code blocks\e[0m",
+				description: "Empty code blocks provide no functionality and can make the contract harder to read and maintain. They may also indicate incomplete implementations or leftover code that was not properly removed.",
+				issues: "",
+				recommendations: "To improve code clarity, remove any unnecessary empty blocks. If an empty block is required for structural reasons, add a comment explaining its purpose to prevent confusion during audits and future development."
+			}
+			issues_map << {
+				key: :costly_loop_operations,
+				title: "\e[92mCostly storage operations inside loops\e[0m",
+				description: "Performing `SSTORE` operations inside loops is inefficient and significantly increases gas consumption. Each write to storage incurs a high gas cost, which can make transactions more expensive and even lead to out-of-gas errors if the loop iterates too many times.",
+				issues: "",
+				recommendations: "Cache values in memory by using local variables inside the loop and write to storage only once after the loop completes. This reduces redundant storage writes and improves contract efficiency."
+			}
+			issues_map << {
+				key: :large_literals,
+				title: "\e[92mLarge Numeric Literals\e[0m",
+				description: "Using large numeric literals directly in code can make it harder to read, understand, and maintain. Numbers with many digits increase the likelihood of typos and errors, making debugging more difficult.",
+				issues: "",
+				recommendations: "Use scientific notation (`e` notation) instead of long numeric literals. For example, replace `1000000000000000000` with `1e18` to represent one Ether in wei."
+			}
+			issues_map << {
+				key: :inconsistent_types,
+				title: "\e[92mInconsistent Integer Declarations\e[0m", 
+				description: "Using a mix of `uint` and `uint256` or `int` and `int256` within the same contract can lead to inconsistencies, making the code harder to read and maintain. While `uint` is an alias for `uint256`, explicitly specifying `uint256` improves clarity, ensures consistency across the codebase, and aligns with best practices.",
+				issues: "",
+				recommendations: "It is reccomended to use `uint256` and `int256` explicitly instead of relying on shorthand types."
+			}
+			issues_map << {
+				key: :state_change_no_event,
+				title: "\e[92mLack of Event Emission for State Changes\e[0m",
+				description: "Changing state variables without emitting an event makes it difficult for off-chain services, dApps, and users to track contract activity. Events provide a reliable way to monitor state changes without requiring expensive storage reads, improving transparency and auditability.",
+				issues: "",
+				recommendations: "It is advised to emit relevant events whenever an important state change occurs. This allows external listeners to efficiently track changes and respond accordingly without needing to query the blockchain."
+			}
+			issues_map << {
+				key: :abicoder_v2,
+				title: "\e[92mRedundant `abicoder v2` Pragma in Solidity `0.8.0+`\e[0m",
+				description: "The `abicoder v2` pragma is unnecessary in Solidity `0.8.0` and later, as it is enabled by default. Keeping this pragma in the code has no effect and may cause confusion regarding its necessity.",
+				issues: "",
+				recommendations: "It is advised to remove `pragma abicoder v2;` from Solidity files when using Solidity `0.8.0` or higher."
+			}
+			issues_map << {
+				key: :abi_encode_unsafe,
+				title: "\e[92mPotential Type Safety Issues When Using `abi.encodeWithSignature` or `abi.encodeWithSelector`\e[0m",
+				description: "Manually encoding function calls with `abi.encodeWithSignature` or `abi.encodeWithSelector` can introduce errors due to typos in function signatures or incorrect parameter ordering. These issues may lead to failed transactions or unintended behavior.",
+				issues: "",
+				recommendations: "To enhance type safety and prevent errors, use `abi.encodeCall`, which ensures that function signatures and argument types match the expected function definition."
+			}
+			issues_map << {
+				key: :constant_naming,
+				title: "\e[92mConstants Should Use CONSTANT_CASE\e[0m",
+				description: "Constant variables should follow the `CONSTANT_CASE` naming convention, where names are written in uppercase letters with underscores separating words. This improves readability, aligns with Solidity best practices, and makes constants easily distinguishable from regular variables.",
+				issues: "",
+				recommendations: "Rename constants to use CONSTANT_CASE (e.g., `MAX_VALUE`)."
+			}
+			issues_map << {
+				key: :control_structure_style,
+				title: "\e[92mInconsistent Formatting of Control Structures\e[0m",
+				description: "Control structures, such as `if`, `for`, and `while`, should follow a consistent style to improve readability and maintainability. Opening braces should be placed on the same line as the condition to align with Solidity's best practices and commonly accepted style guides.",
+				issues: "",
+				recommendations: "To maintain a clean and consistent codebase, it is advised to format control structures as `if (condition) { ... }` instead of placing the opening brace on a new line."
+			}
+			issues_map << {
+				key: :dangerous_while_loop,
+				title: "\e[92mRisk of Infinite Execution Due to `while(true)` Loops\e[0m",
+				description: "Using `while(true)` creates a loop with no explicit termination condition, which can lead to infinite execution. In Solidity, this can cause transactions to run out of gas, resulting in failed execution and wasted gas fees.",
+				issues: "",
+				recommendations: "To prevent infinite loops, replace `while(true)` with a loop that has a well-defined termination condition. If an indefinite loop is necessary, ensure that there is an explicit break condition to allow for controlled exits."
+			}
+			issues_map << {
+				key: :long_lines,
+				title: "\e[92mReduced Readability Due to Excessively Long Lines\e[0m",
+				description: "Lines exceeding 164 characters can negatively impact readability, especially in code review tools like GitHub, where horizontal scrolling is required. Long lines make it harder to spot errors and understand logic at a glance.",
+				issues: "",
+				recommendations: "To improve code readability and maintainability, break long lines into multiple lines using proper formatting. Consider using indentation, line breaks, and helper variables to keep the code structured and easy to follow."
+			}
+			issues_map << {
+				key: :mapping_style,
+				title: "\e[92mInconsistent `mapping` Formatting Reduces Readability\e[0m",
+				description: "Mappings in Solidity should be declared without spaces between `mapping` and the opening parenthesis to maintain consistency with the Solidity Style Guide. Inconsistent formatting can reduce readability and make code harder to review.\n\nReference: [Solidity Style Guide - Mappings](https://docs.soliditylang.org/en/latest/style-guide.html#mappings).",
+				issues: "",
+				recommendations: "To improve clarity and adhere to best practices, declare mappings in the following format: `mapping(address => uint256) balances;` instead of `mapping (address => uint256) balances;`."
+			}
+			issues_map << {
+				key: :hardcoded_address,
+				title: "\e[92mHard-Coded Addresses Reduce Flexibility and Maintainability\e[0m",
+				description: "Using hard-coded addresses in a contract can lead to issues when deploying to different networks or environments. If an address changes due to an upgrade or redeployment, all instances of the contract that rely on the hard-coded value will need to be updated and redeployed, increasing the risk of errors and maintenance overhead.",
+				issues: "",
+				recommendations: "It is advised to replace hard-coded addresses with `immutable` variables that are initialized in the constructor."
+			}
+			issues_map << {
+				key: :safe_math_08,
+				title: "\e[92mRedundant Use of SafeMath in Solidity 0.8+\e[0m",
+				description: "Starting from Solidity 0.8.0, built-in overflow and underflow checks are enabled by default, making the use of `SafeMath` unnecessary. Continuing to use `SafeMath` in newer Solidity versions adds unnecessary complexity and gas overhead without providing additional security benefits.",
+				issues: "",
+				recommendations: "To simplify the code and optimize gas efficiency, remove `SafeMath` and use native arithmetic operations directly. Solidity 0.8+ automatically reverts on overflow and underflow, ensuring safe arithmetic operations without requiring an external library."
+			}
+			issues_map << {
+				key: :scientific_notation_exponent,
+				title: "\e[92mUse of Exponentiation Instead of Scientific Notation\e[0m",
+				description: "Using exponentiation (e.g., `10**18`) in Solidity can make numerical values harder to read and understand at a glance. Scientific notation (`1e18`) is more concise, improves clarity, and is widely recognized in Solidity and other programming languages.",
+				issues: "",
+				recommendations: "It is advised to replace exponentiation with scientific notation. For example, use `1e18` instead of `10**18` when representing large numbers like wei-to-ether conversions. This approach makes the code more intuitive and reduces potential misunderstandings."
+			}
 			# :: low issues ::
-			issues_map << {key: :unspecific_compiler_version_pragma, title: "\e[32mCompiler version Pragma is non-specific\e[0m", description: "For non-library contracts, floating pragmas may be a security risk for application implementations, since a known vulnerable compiler version may accidentally be selected or security tools might fallback to an older compiler version ending up checking a different EVM compilation that is ultimately deployed on the blockchain. References: [Version Pragma | Solidity documents](https://docs.soliditylang.org/en/latest/layout-of-source-files.html#version-pragma), [4.6 Unspecific compiler version pragma | Consensys Audit of 1inch Liquidity Protocol](https://consensys.net/diligence/audits/2020/12/1inch-liquidity-protocol/#unspecific-compiler-version-pragma).", issues: ""}
-			issues_map << {key: :unsafe_erc20_operations, title: "\e[32mUnsafe ERC20 operations\e[0m", description: "ERC20 operations might not be secure due to multiple implementations and vulnerabilities in the standard. It is advised to use OpenZeppelin's SafeERC20 or, at least, wrap each operation in a `require` statement. References: [L001 - Unsafe ERC20 Operation(s)](https://github.com/byterocket/c4-common-issues/blob/main/2-Low-Risk.md#l001---unsafe-erc20-operations), [ERC20 OpenZeppelin documentation, contracts/IERC20.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L43).", issues: ""}
-			issues_map << {key: :deprecated_oz_library_functions, title: "\e[32mDeprecated OpenZeppelin library functions\e[0m", description: "The contracts use deprecated OpenZeppelin Library functions, it is recommend that you avoid using them. References: [openzeppelin-contracts/issues/1064](https://github.com/OpenZeppelin/openzeppelin-contracts/issues/1064), [[L-1] Do not use deprecated library functions](https://gist.github.com/Picodes/ab2df52379e4b4993709be1b91aab651#l-1-do-not-use-deprecated-library-functions).", issues: ""}
-			issues_map << {key: :abiencoded_dynamic, title: "\e[32mAvoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function\e[0m", description: "Instead of using `abi.encodePacked()` use `abi.encode()`. It will pad items to 32 bytes, which will prevent [hash collisions](https://docs.soliditylang.org/en/v0.8.13/abi-spec.html#non-standard-packed-mode). It is possible to cast to `bytes()` or `bytes32()` in place of `abi.encodePacked()` when there is just one parameter, see \"[how to compare strings in solidity?](https://ethereum.stackexchange.com/questions/30912/how-to-compare-strings-in-solidity#answer-82739)\". `bytes.concat()` should be used if all parameters are strings or bytes. Reference: [[L-1] abi.encodePacked() should not be used with dynamic types when passing the result to a hash function such as keccak256()](https://gist.github.com/GalloDaSballo/39b929e8bd48704b9d35b448aaa29480#l-1--abiencodepacked-should-not-be-used-with-dynamic-types-when-passing-the-result-to-a-hash-function-such-as-keccak256).", issues: ""}
-			issues_map << {key: :transfer_ownership, title: "\e[32mUse `safeTransferOwnership` instead of the `transferOwnership` method\e[0m", description: "`transferOwnership` function is used to change ownership. It is reccomended to use a 2 structure `transferOwnership` which is safer, such as `safeTransferOwnership`. Reference: [[L-02] Use safeTransferOwnership instead of transferOwnership function | Caviar contest](https://code4rena.com/reports/2022-12-caviar/#l-02-use-safetransferownership-instead-of-transferownership-function).", issues: ""}
-			issues_map << {key: :draft_openzeppelin, title: "\e[32mDraft OpenZeppelin dependencies\e[0m", description: "OpenZeppelin draft contracts may not have undergone sufficient security auditing or are subject to change as a result of upcoming development. Reference: [[L-02] Draft OpenZeppelin Dependencies | prePO contest](https://code4rena.com/reports/2022-12-prepo/#l-02-draft-openzeppelin-dependencies).", issues: ""}
-			issues_map << {key: :use_of_blocktimestamp, title: "\e[32mTimestamp dependency: use of `block.timestamp` (or `now`)\e[0m", description: "The timestamp of a block is provided by the miner who mined the block. As a result, the timestamp is not guaranteed to be accurate or to be the same across different nodes in the network. In particular, an attacker can potentially mine a block with a timestamp that is favorable to them, known as \"selective packing\". For example, an attacker could mine a block with a timestamp that is slightly in the future, allowing them to bypass a time-based restriction in a smart contract that relies on `block.timestamp`. This could potentially allow the attacker to execute a malicious action that would otherwise be blocked by the restriction. It is reccomended to, instead, use an alternative timestamp source, such as an oracle, that is not susceptible to manipulation by a miner. References: [Timestamp dependence | Solidity Best Practices for Smart Contract Security](https://consensys.net/blog/developers/solidity-best-practices-for-smart-contract-security/), [What Is Timestamp Dependence?](https://halborn.com/what-is-timestamp-dependence/).", issues: ""}
-			issues_map << {key: :calls_in_loop, title: "\e[32mUsage of calls inside of loop\e[0m", description: "A denial-of-service attack might result from calls made inside a loop. Reference: [Calls inside a loop | Slither](https://github.com/crytic/slither/wiki/Detector-Documentation#calls-inside-a-loop).", issues: ""}
-			issues_map << {key: :outdated_pragma, title: "\e[32mOutdated Compiler Version\e[0m", description: "Using an older compiler version might be risky, especially if the version in question has faults and problems that have been made public. References: [SWC-102](https://swcregistry.io/docs/SWC-102), [Etherscan Solidity Bug Info](https://etherscan.io/solcbuginfo).", issues: ""}
-			issues_map << {key: :ownableupgradeable, title: "\e[32mUse `Ownable2StepUpgradeable` instead of `OwnableUpgradeable` contract\e[0m", description: "It is recommended to use [Ownable2StepUpgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/access/Ownable2StepUpgradeable.sol) instead of OwnableUpgradeable contract. Reference: [[L-04] Use Ownable2StepUpgradeable instead of OwnableUpgradeable contract](https://code4rena.com/reports/2022-11-redactedcartel/#l-04-use-ownable2stepupgradeable-instead-of-ownableupgradeable-contract).", issues: ""}
-			issues_map << {key: :ecrecover_addr_zero, title: "\e[32m`ecrecover()` does not check for `address(0)`\e[0m", description: "In the contract it was found the use of `ecrecover()` without implementing proper checks for `address(0)`. When a signature is incorrect, ecrecover may occasionally provide a random address rather than 0. It is also reccomended to implement the OpenZeppelin solution [ECDSA.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol). Reference: [What is ecrecover in Solidity?](https://soliditydeveloper.com/ecrecover).", issues: ""}
-			issues_map << {key: :dont_use_assert, title: "\e[32mUse `require` instead of `assert`\e[0m", description: "It is reccomended to use `require` instead of `assert` since the latest, when false, uses up all the remaining gas and reverts all the changes made. Reference: [Require vs Assert in Solidity](https://dev.to/tawseef/require-vs-assert-in-solidity-5e9d).", issues: ""}
-			issues_map << {key: :deprecated_cl_library_function, title: "\e[32mDeprecated ChainLink library function\e[0m", description: "[As per Chainlink's documentation](https://docs.chain.link/data-feeds/api-reference), the contracts use deprecated ChainLink Library functions, it is recommend that you avoid using them.", issues: ""}
-			issues_map << {key: :push_0_pragma, title: "\e[32mSolidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains\e[0m", description: "Solidity compiler version 0.8.20 introduces a bytecode optimization that utilizes PUSH0 opcodes for gas efficiency. However, this may cause deployment issues on EVM implementations, such as certain L2 chains, that do not support PUSH0. It's crucial to consider the target deployment chain's compatibility and select the appropriate Solidity version or adjust the compiler settings to ensure seamless contract deployment.", issues: ""}
-			issues_map << {key: :unused_error, title: "\e[32mDeclared and not used errors in the contract\e[0m", description: "Some errors are declared in the contract but are never used. It is advisable to examine them to ascertain whether they need to be used or possibly comment or delete them.", issues: ""}
+			issues_map << {
+				key: :unspecific_compiler_version_pragma,
+				title: "\e[32mUse a Fixed Solidity Version to Ensure Consistent Compilation\e[0m",
+				description: "For non-library contracts, floating pragmas (`^0.8.0`) may introduce security risks by allowing compilation with unintended or vulnerable Solidity versions. Using a specific compiler version ensures that the contract is compiled consistently across different environments.\n\nReference: [Version Pragma | Solidity Documentation](https://docs.soliditylang.org/en/latest/layout-of-source-files.html#version-pragma).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use a fixed Solidity version to ensure consistent compilation.
+				```solidity
+				// Before
+				pragma solidity ^0.8.0;
+				
+				// After
+				pragma solidity 0.8.20;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :unsafe_erc20_operations,
+				title: "\e[32mUse `SafeERC20` to Prevent Unsafe ERC20 Operations\e[0m",
+				description: "ERC20 tokens have multiple implementations, some of which do not follow the standard correctly. Using OpenZeppelin's `SafeERC20` helps prevent issues by handling failures safely. If `SafeERC20` is not used, ensure each operation is wrapped in a `require` statement to check for successful execution.\n\nReference: [ERC20 OpenZeppelin Documentation](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L43).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use SafeERC20 for ERC20 operations.
+				```solidity
+				// Before
+				token.transferFrom(msg.sender, address(this), amount);
+				
+				// After
+				import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+				SafeERC20.safeTransferFrom(token, msg.sender, address(this), amount);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :deprecated_oz_library_functions,
+				title: "\e[32mAvoid Using Deprecated OpenZeppelin Library Functions\e[0m",
+				description: "Some OpenZeppelin library functions have been deprecated and should be replaced with their modern equivalents. Using outdated functions may lead to compatibility issues and security risks. Always refer to the latest OpenZeppelin documentation to ensure best practices.\n\nReference: [OpenZeppelin Contracts Issue #1064](https://github.com/OpenZeppelin/openzeppelin-contracts/issues/1064).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Replace deprecated functions with modern equivalents.
+				```solidity
+				// Before
+				_setupRole(DEFAULT_ADMIN_ROLE, admin);
+				
+				// After
+				_grantRole(DEFAULT_ADMIN_ROLE, admin);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :abiencoded_dynamic,
+				title: "\e[32mAvoid Using `abi.encodePacked()` with Dynamic Types When Hashing\e[0m",
+				description: "Using `abi.encodePacked()` with dynamic types before hashing can lead to hash collisions due to improper padding. Instead, use `abi.encode()`, which ensures all values are padded to 32 bytes. If there is only one dynamic argument, consider casting it to `bytes()` or `bytes32()` before hashing. When concatenating multiple dynamic types, use `bytes.concat()` instead of `abi.encodePacked()`.\n\nReference: [Solidity ABI Specification - Non-Standard Packed Mode](https://docs.soliditylang.org/en/v0.8.13/abi-spec.html#non-standard-packed-mode), [How to Compare Strings in Solidity?](https://ethereum.stackexchange.com/questions/30912/how-to-compare-strings-in-solidity#answer-82739).",
+				issues: "",
+				recommendations: "Replace `abi.encodePacked()` with `abi.encode()` when dealing with dynamic types. This prevents hash collisions due to improper padding. If there is only a single dynamic argument, consider casting to `bytes()` or `bytes32()` before hashing. When concatenating multiple dynamic types, use `bytes.concat()` instead of `abi.encodePacked()`."
+			}
+			issues_map << {
+				key: :transfer_ownership,
+				title: "\e[32mUse `safeTransferOwnership` Instead of `transferOwnership` for Safer Ownership Transfers\e[0m",
+				description: "The `transferOwnership` function transfers contract ownership in a single step, which can lead to accidental ownership loss. Using a two-step process like `safeTransferOwnership` improves security by requiring the new owner to accept ownership explicitly.\n\nReference: [OpenZeppelin Ownable2Step](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable2Step.sol).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Implement two-step ownership transfer.
+				```solidity
+				// Before
+				transferOwnership(newOwner);
+				
+				// After
+				import "@openzeppelin/contracts/access/Ownable2Step.sol";
+				safeTransferOwnership(newOwner);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :draft_openzeppelin,
+				title: "\e[32mAvoid Using Draft OpenZeppelin Contracts\e[0m",
+				description: "Draft OpenZeppelin contracts may not be fully audited and are subject to changes, which can introduce security risks and instability. To ensure reliability, replace draft imports with stable, production-ready versions.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Replace draft imports with stable versions.
+				```solidity
+				// Before
+				import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
+				
+				// After
+				import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_of_blocktimestamp,
+				title: "\e[32mAvoid Relying on `block.timestamp` for Critical Logic\e[0m",
+				description: "The block timestamp is set by the miner and can be manipulated within a small range, making it unreliable for critical operations like time-based restrictions. This vulnerability, known as \"selective packing\", can be exploited to bypass contract logic. For better security, use an external timestamp source such as an oracle, which is less susceptible to manipulation.\n\nReferences: [Timestamp Dependence | Solidity Best Practices](https://consensys.net/blog/developers/solidity-best-practices-for-smart-contract-security/), [What Is Timestamp Dependence?](https://halborn.com/what-is-timestamp-dependence/).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use oracle-based timestamps for critical logic.
+				```solidity
+				// Before
+				require(block.timestamp > deadline, "Expired");
+				
+				// After
+				uint256 oracleTimestamp = chainlinkOracle.getTimestamp();
+				require(oracleTimestamp > deadline, "Expired");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :calls_in_loop,
+				title: "\e[32mAvoid Making External Calls Inside Loops\e[0m",
+				description: "Calling external contracts inside a loop can lead to denial-of-service (DoS) attacks if one of the calls fails or takes too long to execute. This can also result in excessive gas consumption, making transactions more expensive or even causing them to fail. To mitigate this risk, consider batching operations or restructuring the code to minimize external calls within loops.",
+				issues: "",
+				recommendations: "Restructure code to avoid external calls in loops."
+			}
+			issues_map << {
+				key: :outdated_pragma,
+				title: "\e[32mUpgrade to a Recent Solidity Version to Avoid Security Risks\e[0m",
+				description: "Using an outdated Solidity compiler version can expose the contract to known vulnerabilities and missing optimizations. Always use a recent version (`≥0.8.10`) to benefit from security patches, gas optimizations, and improved features.\n\nReference: [Etherscan Solidity Bug Info](https://etherscan.io/solcbuginfo).",
+				issues: "",
+				recommendations: "Upgrade to a recent Solidity version (Solidity ≥0.8.10)"
+			}
+			issues_map << {
+				key: :ownableupgradeable,
+				title: "\e[32mUse `Ownable2StepUpgradeable` Instead of `OwnableUpgradeable` for Safer Ownership Transfers\e[0m",
+				description: "Replacing `OwnableUpgradeable` with `Ownable2StepUpgradeable` improves security by introducing a two-step ownership transfer process. This prevents accidental loss of ownership and enhances contract safety.\n\nReference: [Ownable2StepUpgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/access/Ownable2StepUpgradeable.sol).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Implement Ownable2StepUpgradeable instead of OwnableUpgradeable.
+				```solidity
+				// Before
+				import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+				
+				// After
+				import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :ecrecover_addr_zero,
+				title: "\e[32mEnsure `ecrecover()` Does Not Return `address(0)`\e[0m",
+				description: "Using `ecrecover()` without checking for `address(0)` can lead to incorrect signature validation, as `ecrecover()` may return a random address instead of `0` for an invalid signature. Always include a check to reject zero addresses. It is also recommended to use OpenZeppelin's [ECDSA.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol) for safer and more reliable signature verification.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Add a check for zero address.
+				```solidity
+				address recovered = ecrecover(...);
+				require(recovered != address(0), "Invalid signature");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :dont_use_assert,
+				title: "\e[32mUse `require` Instead of `assert` to Prevent Gas Wastage\e[0m",
+				description: "`assert()` consumes all remaining gas when it fails, whereas `require()` allows unused gas to be refunded. Use `require()` for input validation and conditions to prevent unnecessary gas loss and improve contract efficiency.\n\nReference: [Require vs Assert in Solidity](https://dev.to/tawseef/require-vs-assert-in-solidity-5e9d).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Replace `assert` with `require`.
+				```solidity
+				// Before
+				assert(condition);
+				
+				// After
+				require(condition, "Condition failed");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :deprecated_cl_library_function,
+				title: "\e[32mAvoid Using Deprecated Chainlink Library Functions\e[0m",
+				description: "Chainlink has deprecated functions like `getTimestamp`, `getAnswer`, `latestRound`, and `latestTimestamp`. Using outdated functions can lead to compatibility issues and missing improvements. It is recommended to update contracts to use the latest Chainlink Data Feeds functions, such as `latestRoundData()`, to ensure reliability and accuracy.\n\nReference: [Chainlink Data Feeds API Reference](https://docs.chain.link/data-feeds/api-reference).",
+				issues: "",
+				recommendations: "Update the contract to use the latest Chainlink Data Feeds functions, such as `latestRoundData()` or other recommended functions."
+			}
+			issues_map << {
+				key: :push_0_pragma,
+				title: "\e[32mEnsure Compatibility with `PUSH0` Opcode When Using Solidity `≥ 0.8.20`\e[0m",
+				description: "Solidity `0.8.20` introduces the `PUSH0` opcode for gas optimization, but some EVM implementations, including certain Layer 2 chains, may not support it. Deploying contracts on incompatible chains could lead to failures. To avoid deployment issues, verify the target chain's support for `PUSH0`. If incompatibilities exist, consider downgrading the Solidity compiler to a version below `0.8.20` or use compiler flags to disable `PUSH0` optimizations.",
+				issues: "",
+				recommendations: "Verify the target deployment chain's support for the `PUSH0` opcode. If compatibility issues exist, downgrade the Solidity compiler to a version below 0.8.20 or use compiler flags to disable `PUSH0` optimizations. Consider using `solc` with appropriate settings to ensure seamless deployment across different EVM implementations."
+			}
+			issues_map << {
+				key: :unused_error,
+				title: "\e[32mRemove or Implement Unused Error Declarations\e[0m",
+				description: "Some errors are declared but never used in the contract. Unused errors can add unnecessary complexity and should be reviewed to determine if they are needed. If not required, they should be removed or commented out to keep the code clean and maintainable.",
+				issues: "",
+				recommendations: "It is advised to remove or implement unused errors."
+			}
+			issues_map << {
+				key: :shadowed_global,
+				title: "\e[32mAvoid Shadowing Built-In Global Symbols\e[0m",
+				description: "Using variable or function names that shadow built-in global symbols like `now`, `msg`, or `block` can lead to confusion and unintended behavior. To improve readability and prevent potential issues, rename such variables and functions in order to avoid conflicts.",
+				issues: "",
+				recommendations: "It is advised to rename variables and functions to avoid shadowing."
+			}
+			issues_map << {
+				key: :div_before_mul,
+				title: "\e[32mPerform Multiplication Before Division to Prevent Precision Loss\e[0m",
+				description: "In Solidity, integer division truncates decimals, which can lead to precision loss if division is performed before multiplication. To maintain accuracy, always reorder operations to multiply first and then divide.\n\nReference: [Solidity Integer Division](https://docs.soliditylang.org/en/latest/types.html#division).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Reorder operations to multiply first.
+				```solidity
+				// Before
+				uint256 result = (a / b) * c;
+				
+				// After
+				uint256 result = (a * c) / b;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :uniswap_block_timestamp_deadline,
+				title: "\e[32mLack of Protection When Using `block.timestamp` for Swap Deadlines\e[0m",
+				description: "Relying on `block.timestamp` for swap deadlines provides no security against manipulation. In Proof-of-Stake (PoS) networks, block proposers can predict and reorder transactions within a block, potentially executing swaps under more favorable conditions. This can expose users to front-running risks and manipulated execution timing.",
+				issues: "",
+				recommendations: "Allow users to specify deadline parameters rather than defaulting to `block.timestamp`. This ensures greater control over transaction execution and reduces the risk of manipulation."
+			}
+			issues_map << {
+				key: :unused_internal_func,
+				title: "\e[32mUnused Internal Functions\e[0m",
+				description: "Internal functions that are never called within the contract may indicate dead code, increasing contract size unnecessarily and potentially causing confusion during audits. Keeping unused functions can also introduce security risks if they become accessible through future upgrades or integrations.",
+				issues: "",
+				recommendations: "Remove any internal functions that are not in use. If the function is intended for external use, consider changing its visibility to `public` or `external` to clarify its purpose."
+			}
+			issues_map << {
+				key: :assembly_in_constant,
+				title: "\e[32mPotential Side Effects from Using Assembly in `pure` or `view` Functions\e[0m",
+				description: "Using inline assembly within `pure` or `view` functions can lead to unintended side effects, potentially violating the expected behavior of these functions. Solidity enforces restrictions on state modifications in `pure` and `view` functions, but assembly can bypass these safeguards, leading to unexpected interactions with storage or execution context.",
+				issues: "",
+				recommendations: "Avoid using inline assembly in `pure` or `view` functions unless absolutely necessary. If assembly is required, thoroughly review the code to ensure no unintended state changes occur. Consider using Solidity's built-in functions instead of assembly whenever possible to maintain transparency and security."
+			}
+			issues_map << {
+				key: :reverts_in_loops,
+				title: "\e[32mEntire Transaction May Revert Due to `require` / `revert` Inside a Loop\e[0m",
+				description: "Using `require` or `revert` inside a loop means that if any iteration fails, the entire transaction is reverted. This can be problematic in scenarios where partial progress should be preserved, such as batch processing or multi-step operations.",
+				issues: "",
+				recommendations: "It is advised to handle failed iterations individually instead of reverting the entire transaction."
+			}
+			issues_map << {
+				key: :decimals_not_erc20,
+				title: "\e[32m`decimals()` is not a part of the ERC-20 standard\e[0m",
+				description: "The `decimals()` function is not a part of the ERC-20 standard and was added later as an optional extension. Some valid ERC20 tokens do not support this interface, so it is unsafe to blindly cast all tokens to this interface and then call this function.",
+				issues: "",
+				recommendations: "Ensure that the token supports the `decimals()` function before calling it."
+			}
+			issues_map << {
+				key: :decimals_not_uint8,
+				title: "\e[32m`decimals()` should be of type `uint8`\e[0m",
+				description: "The `decimals()` function should be of type `uint8` to ensure compatibility with the ERC-20 standard.",
+				issues: "",
+				recommendations: "Ensure that the `decimals()` function is of type `uint8`."
+			}
+			issues_map << {
+				key: :fallback_lacking_payable,
+				title: "\e[32mFallback Lacking `payable`\e[0m",
+				description: "The fallback function is not marked as `payable`, which means it cannot receive Ether. If the contract is expected to receive Ether, mark the fallback function as `payable`.",
+				issues: "",
+				recommendations: "Mark the fallback function as `payable` if it is expected to receive Ether."
+			}
+			issues_map << {
+				key: :symbol_not_erc20,
+				title: "\e[32m`symbol()` is not a part of the ERC-20 standard\e[0m",
+				description: "The `symbol()` function is not part of the original ERC-20 standard and was introduced later as an optional extension. Some ERC-20 tokens do not implement this function, which can lead to contract failures if the function is called without checking for support. Blindly casting all tokens to an interface that includes `symbol()` may result in unexpected behavior.",
+				issues: "",
+				recommendations: "Verify that the token supports the `symbol()` function before calling it. This can be done using ERC-165's `supportsInterface` or by handling missing functions gracefully with a try-catch statement when interacting with untrusted tokens."
+			}
+			issues_map << {
+				key: :hardcoded_year,
+				title: "\e[32mInaccurate Year Duration Assumption\e[0m",
+				description: "Assuming a year is exactly `365 days` in Solidity can lead to inaccuracies, as it does not account for leap years. Over time, these small discrepancies can accumulate, affecting contracts that rely on precise time-based calculations, such as vesting schedules or interest rate calculations.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use explicit time conversions:
+				```solidity
+				// Before
+				uint256 year = 365 days;
+
+				// Better alternative:
+				uint256 year = 365.25 days; // Or use 1 years
+				```
+				RECOMMENDATIONS
+			}
 
 			# medium issues
-			issues_map << {key: :single_point_of_control, title: "\e[33mCentralization risk detected: contract has a single point of control\e[0m", description: "Centralization risks are weaknesses that malevolent project creators as well as hostile outside attackers can take advantage of. They may be used in several forms of attacks, including rug pulls. When contracts have a single point of control, contract owners need to be trusted to prevent fraudulent upgrades and money draining since they have privileged access to carry out administrative chores. Some solutions to this issue include implementing timelocks and/or multi signature custody. Reference: [Trusting a Smart Contract Means Trusting Its Owners: Understanding Centralization Risk](https://arxiv.org/html/2312.06510v1), [UK Court Ordered Oasis to Exploit Own Security Flaw to Recover 120k wETH Stolen in Wormhole Hack](https://medium.com/@observer1/uk-court-ordered-oasis-to-exploit-own-security-flaw-to-recover-120k-weth-stolen-in-wormhole-hack-fcadc439ca9d).", issues: ""}
-			issues_map << {key: :use_safemint, title: "\e[33mUse `_safeMint` instead of `_mint`\e[0m", description: "In favor of `_safeMint()`, which guarantees that the receiver is either an EOA or implements IERC721Receiver, `_mint()` is deprecated. References: [OpenZeppelin warning ERC721.sol#L271](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/d4d8d2ed9798cc3383912a23b5e8d5cb602f7d4b/contracts/token/ERC721/ERC721.sol#L271), [solmate _safeMint](https://github.com/transmissions11/solmate/blob/4eaf6b68202e36f67cab379768ac6be304c8ebde/src/tokens/ERC721.sol#L180), [OpenZeppelin _safeMint](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/d4d8d2ed9798cc3383912a23b5e8d5cb602f7d4b/contracts/token/ERC721/ERC721.sol#L238-L250).", issues: ""}
-			issues_map << {key: :use_safemint_msgsender, title: "\e[33mNFT can be frozen in the contract, use `_safeMint` instead of `_mint`\e[0m", description: "The NFT can be frozen in the contract if `msg.sender` is an address for a contract that does not support ERC721. This means that users could lose their NFT. It is reccomended to use `_safeMint` instead of `_mint`. References: [EIP-721](https://eips.ethereum.org/EIPS/eip-721), [ERC721.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol#L274-L285).", issues: ""}
-			issues_map << {key: :use_of_cl_lastanswer, title: "\e[33mUse of the deprecated `latestAnswer` function in contracts\e[0m", description: "[As per Chainlink's documentation](https://docs.chain.link/data-feeds/api-reference#latestanswer), the `latestAnswer` function is no longer recommended for use. This function does not generate an error in case no answer is available; instead, it returns 0, which could lead to inaccurate prices being provided to various price feeds or potentially result in a Denial of Service. It is recommended to use [`latestRoundData()`](https://docs.chain.link/data-feeds/api-reference#latestrounddata).", issues: ""}
-			issues_map << {key: :solmate_not_safe, title: "\e[33mSafeTransferLib.sol does not check if a token is a contract or not\e[0m", description: "[As per Solmate's SafeTransferLib.sol](https://github.com/transmissions11/solmate/blob/main/src/utils/SafeTransferLib.sol#L9), the contract does not verify the existence of the token contract, delegating this responability to the caller. This creates the possiblity for a honeypot attack. An example is the [Qubit Finance hack in January 2022](https://www.halborn.com/blog/post/explained-the-qubit-hack-january-2022). Consider using [OpenZeppelin's SafeERC20](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#SafeERC20) instead.", issues: ""}
-			issues_map << {key: :nested_loop, title: "\e[33mNested loops could lead to Denial of Service\e[0m", description: "Nested loops in Solidity can lead to an exponential increase in gas consumption. This can cause transactions to fail causing a Denial of Service which can compromise the reliability and scalability of the protocol.", issues: ""}
-			issues_map << {key: :unchecked_recover, title: "\e[33mThe output of the `ECDSA.recover` function is not checked\e[0m", description: "The `ECDSA.recover` function [returns `address(0)`](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.1/contracts/cryptography/ECDSA.sol#L28) if the signature provided is invalid and this can result in unintended behavior. Consider check the output and reverting if it is `address(0)`.",issues: ""}
-			issues_map << {key: :unchecked_transfer_transferfrom, title: "\e[33mThe result of the `transfer` or `transferFrom` function is not checked\e[0m", description: "Implementations of ERC20 are not always consistent. On failure, some `transfer` and `transferFrom` implementations might return `false` rather than reverting. To prevent these errors, it is advisable to encapsulate such calls in `require()` instructions.",issues: ""}
-			issues_map << {key: :use_of_blocknumber, title: "\e[33mUse of `block.number` could lead to different results across EVM chains\e[0m", description: "Using `block.number` in Solidity can cause issues on Layer 2 networks like Optimism and Arbitrum due to differences in how block numbers are interpreted. On Optimism, `block.number` reflects the L2 block number, while on Arbitrum, it represents the L1 block number. These discrepancies can lead to logic errors in contracts relying on `block.number` for time-sensitive operations or calculations, making it unsuitable for cross-chain deployments.",issues: ""}
-			issues_map << {key: :stale_check_missing, title: "\e[33mStale Oracle Data Validation Missing in Contract Logic\e[0m", description: "The contract fetches price or data values from Oracles (e.g., Chainlink) without validating the freshness of the returned data. Oracles typically provide a timestamp (`latestTimestamp`) along with the price or data value, which indicates when the data was last updated. If the Oracles are down, unresponsive, or delayed, outdated data may be fetched and used in contract operations, potentially leading to incorrect calculations or vulnerabilities. It is advised to implement a check to ensure that the data is recent and within an acceptable staleness threshold (e.g., 1 hour).",issues: ""}
+			issues_map << {
+				key: :single_point_of_control,
+				title: "\e[33mCentralization Risk Due to Single Points of Control\e[0m",
+				description: "Contracts with a single point of control pose centralization risks, making them vulnerable to malicious actions such as rug pulls or unauthorized upgrades. Contract owners must be trusted to act responsibly, but implementing security mechanisms can reduce these risks. To enhance security, consider using timelocks for administrative actions and multi-signature wallets (multi-sig) for privileged operations. These measures improve transparency and reduce the risk of a single entity having unchecked control.\n\nReference: [UK Court Ordered Oasis to Exploit Own Security Flaw to Recover 120k wETH Stolen in Wormhole Hack](https://medium.com/@observer1/uk-court-ordered-oasis-to-exploit-own-security-flaw-to-recover-120k-weth-stolen-in-wormhole-hack-fcadc439ca9d).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Implement timelock and multi-sig mechanisms for privileged operations.
+				```solidity
+				// Using OpenZeppelin's TimelockController
+				import "@openzeppelin/contracts/governance/TimelockController.sol";
+				
+				// Or Gnosis Safe multi-sig
+				import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_safemint,
+				title: "\e[33mUse `_safeMint` Instead of `_mint` to Prevent NFT Loss\e[0m",
+				description: "The `_mint()` function does not verify whether the recipient can receive ERC721 tokens, which can lead to lost or frozen NFTs if sent to an incompatible contract. Using `_safeMint()` ensures that the recipient is either an externally owned account (EOA) or a contract implementing `IERC721Receiver`, preventing this issue. This applies even when minting to `msg.sender`, as `msg.sender` might be a contract that does not support ERC721. Always use `_safeMint()` instead of `_mint()` to guarantee safe transfers.\n\nReferences: [EIP-721](https://eips.ethereum.org/EIPS/eip-721), [OpenZeppelin Warning ERC721.sol#L271](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/d4d8d2ed9798cc3383912a23b5e8d5cb602f7d4b/contracts/token/ERC721/ERC721.sol#L271), [Solmate `_safeMint`](https://github.com/transmissions11/solmate/blob/4eaf6b68202e36f67cab379768ac6be304c8ebde/src/tokens/ERC721.sol#L180), [OpenZeppelin `_safeMint`](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol#L238-L250).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Replace `_mint` with `_safeMint` to ensure safe transfers.
+				```solidity
+				// Before
+				_mint(to, tokenId);
+				_mint(msg.sender, tokenId);
+				
+				// After
+				_safeMint(to, tokenId, "");
+				_safeMint(msg.sender, tokenId, "");
+				
+				// Recipient contract must implement:
+				function onERC721Received(address, address, uint256, bytes memory) 
+					public pure returns (bytes4) {
+					return this.onERC721Received.selector;
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_of_cl_lastanswer,
+				title: "\e[33mReplace `latestAnswer` with `latestRoundData()` for Reliable Price Feeds\e[0m",
+				description: "The `latestAnswer` function is deprecated and does not return an error if no valid price is available, instead defaulting to `0`. This can lead to inaccurate price feeds or potential denial-of-service issues. To ensure price accuracy and contract reliability, use `latestRoundData()` and include validation checks for stale or invalid prices.\n\nReferences: [Chainlink API Reference - latestAnswer](https://docs.chain.link/data-feeds/api-reference#latestanswer), [latestRoundData() Documentation](https://docs.chain.link/data-feeds/api-reference#latestrounddata).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use latestRoundData() with validation checks
+				```solidity
+				(, int256 price,, uint256 updatedAt,) = 
+					chainlinkFeed.latestRoundData();
+				
+				require(updatedAt >= block.timestamp - 1 hours, "Stale price");
+				require(price > 0, "Invalid price");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :solmate_not_safe,
+				title: "\e[33mUse OpenZeppelin's `SafeERC20` Instead of `SafeTransferLib.sol` for Safer Transfers\e[0m",
+				description: "Solmate's `SafeTransferLib.sol` does not verify whether a token address is a valid contract, leaving this responsibility to the caller. This increases the risk of honeypot attacks, where a malicious contract can trap funds. To enhance security, use OpenZeppelin's `SafeERC20`, which includes additional safety checks to prevent interacting with non-existent token contracts.\n\nReferences: [Solmate's SafeTransferLib.sol](https://github.com/transmissions11/solmate/blob/main/src/utils/SafeTransferLib.sol#L9), [Qubit Finance Hack - January 2022](https://www.halborn.com/blog/post/explained-the-qubit-hack-january-2022), [OpenZeppelin SafeERC20](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#SafeERC20).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use OpenZeppelin's SafeERC20 instead
+				```solidity
+				// Before
+				import "solmate/utils/SafeTransferLib.sol";
+				SafeTransferLib.safeTransferFrom(token, from, to, amount);
+				
+				// After
+				import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+				SafeERC20.safeTransferFrom(IERC20(token), from, to, amount);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :nested_loop,
+				title: "\e[33mAvoid Nested Loops to Prevent Denial of Service\e[0m",
+				description: "Nested loops in Solidity can cause an exponential increase in gas consumption, potentially leading to transaction failures and denial of service. This can compromise the reliability and scalability of the protocol. To mitigate this issue, avoid nested loops whenever possible or implement pagination to process data in smaller batches.",
+				issues: "",
+				recommendations: "Avoid nested loops or implement pagination"
+			}
+			issues_map << {
+				key: :unchecked_recover,
+				title: "\e[33mValidate `ECDSA.recover` Output to Prevent Unintended Behavior\e[0m",
+				description: "The `ECDSA.recover` function returns `address(0)` if the provided signature is invalid. If this output is not checked, it can lead to unintended behavior, such as unauthorized access or incorrect validation. To ensure security, always validate the recovered address and revert if it is `address(0)`. Additionally, compare the recovered address with the expected signer to prevent unauthorized actions.\n\nReference: [OpenZeppelin ECDSA.sol](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.1/contracts/cryptography/ECDSA.sol#L28).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Validate recovered address
+				```solidity
+				address signer = ecrecover(hash, v, r, s);
+				require(signer != address(0), "Invalid signature");
+				require(signer == expectedSigner, "Unauthorized");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :unchecked_transfer_transferfrom,
+				title: "\e[33mCheck the Return Value of `transfer` and `transferFrom` to Prevent Silent Failures\e[0m",
+				description: "Not all ERC20 token implementations revert on failure—some return `false` instead. If the return value of `transfer` or `transferFrom` is not checked, failed transfers might go unnoticed, leading to unintended behavior. To ensure safe transfers, use OpenZeppelin's `SafeERC20`, which correctly handles failures, or explicitly check the return value and revert if the transfer fails.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use SafeERC20 or check return values
+				```solidity
+				// With SafeERC20
+				SafeERC20.safeTransfer(token, to, amount);
+				
+				// Manual check
+				bool success = token.transfer(to, amount);
+				require(success, "Transfer failed");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :use_of_blocknumber,
+				title: "\e[33mAvoid Using `block.number` for Time Calculations Across EVM Chains\e[0m",
+				description: "The interpretation of `block.number` varies across Layer 2 networks. On Optimism, it represents the L2 block number, while on Arbitrum, it reflects the L1 block number. These inconsistencies can cause logic errors in contracts that rely on `block.number` for time-sensitive operations. To ensure consistency across different chains, use `block.timestamp` instead of `block.number` for time-based calculations.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use timestamp-based durations instead
+				```solidity
+				// Before
+				uint256 deadline = block.number + 100;
+				
+				// After (assuming 15s blocks)
+				uint256 deadline = block.timestamp + 25 minutes; 
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :stale_check_missing,
+				title: "\e[33mValidate Oracle Data Freshness to Prevent Stale Price Usage\e[0m",
+				description: "Fetching price or data values from oracles without checking their timestamps can lead to outdated or incorrect values being used in contract operations. If an oracle is down, unresponsive, or delayed, it may return stale data, leading to vulnerabilities or incorrect calculations. To prevent this, always implement a staleness check by ensuring the data's timestamp is within an acceptable threshold (e.g., 1 hour).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Add staleness checks for oracle data
+				```solidity
+				(, int256 price,, uint256 updatedAt,) = 
+					priceFeed.latestRoundData();
+				
+				require(
+					updatedAt >= block.timestamp - 2 hours,
+					"Stale price data"
+				);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :tx_origin_usage,
+				title: "\e[33mUse of `tx.origin` for Authorization\e[0m",
+				description: "Using `tx.origin` instead of `msg.sender` for access control exposes the contract to phishing attacks. Malicious contracts can trick users into executing transactions that bypass security checks. To prevent this, always use `msg.sender` for validating authorized callers.\n\nReference: [Solidity Docs: tx.origin](https://docs.soliditylang.org/en/latest/security-considerations.html#tx-origin).",
+				issues: "",
+				recommendations: "Replace `tx.origin` with `msg.sender`"
+			}
+			issues_map << {
+				key: :gas_griefing,
+				title: "\e[33mUse Bounded Gas for External Calls to Prevent Gas Griefing Attacks\e[0m",
+				description: "Forwarding all available gas in external calls (e.g., `call{gas: ...}`) can allow attackers to trigger out-of-gas failures, leading to denial-of-service vulnerabilities. To improve reliability, always set a bounded gas limit (e.g., `gas: 100000`) when making external calls.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use bounded gas for external calls
+				```solidity
+				// Before
+				(bool success,) = to.call{value: amount}("");
+				
+				// After
+				(bool success,) = to.call{value: amount, gas: 100000}("");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :insecure_randomness,
+				title: "\e[33mAvoid Using `blockhash` for Randomness to Prevent Manipulation\e[0m",
+				description: "Using `blockhash` for randomness is insecure because miners can influence the outcome by selectively mining blocks. This makes it unsuitable for applications requiring fair and unpredictable randomness. To ensure secure randomness, use decentralized oracles such as Chainlink VRF, which provides verifiable and tamper-proof random values.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use Chainlink VRF for randomness
+				```solidity
+				import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+				
+				function requestRandomness() external {
+					bytes32 requestId = requestRandomness(keyHash, fee);
+				}
+				
+				function fulfillRandomness(bytes32, uint256 randomness) internal override {
+					// Use secure random number
+				}
+				```
+				RECOMMENDATIONS
+			}
 
 			# high issues
-			issues_map << {key: :delegatecall_in_loop, title: "\e[31mUse of `delegatecall` inside of a loop\e[0m", description: "Using `delegatecall` in a payable function within a loop can pose a vulnerability where each call retains the `msg.value` of the initial transaction. This can lead to unexpected behaviors, especially in scenarios involving fund transfers. References: [\"Two Rights Might Make A Wrong\" by samczsun](https://www.paradigm.xyz/2021/08/two-rights-might-make-a-wrong)",issues: ""}
-			issues_map << {key: :arbitrary_from_in_transferFrom, title: "\e[31mArbitrary `from` in `transferFrom` / `safeTransferFrom`\e[0m", description: "Allowing any `from` address to be passed to `transferFrom` (or `safeTransferFrom`) may result in potential loss of funds, as it enables anyone to transfer tokens from the designated address upon approval.", issues: ""}
-			issues_map << {key: :msgvalue_in_loop, title: "\e[31mUse of `msg.value` inside of a loop\e[0m", description: "Using `msg.value` inside a loop can be problematic as the same value will be reused and this can lead to breaking protocol logic depending on the scenario. Reference: \"[Detecting MISO and Opyn's msg.value reuse vulnerability with Slither](https://blog.trailofbits.com/2021/12/16/detecting-miso-and-opyns-msg-value-reuse-vulnerability-with-slither/)\"", issues: ""}
-
-
-			sol_files.each do |sol_file|
+			issues_map << {
+				key: :delegatecall_in_loop_payable,
+				title: "\e[31mUse of `delegatecall` Inside Loops in Payable Function\e[0m",
+				description: "Using `delegatecall` within a loop in a payable function can cause issues where each call retains the `msg.value` from the initial transaction. This can lead to unintended fund transfers and vulnerabilities. If `delegatecall` inside a loop is unavoidable, ensure that no `msg.value` is forwarded within loops, implement strict access controls, and use reentrancy guards to prevent attacks.\n\nReference: [\"Two Rights Might Make A Wrong\" by samczsun](https://www.paradigm.xyz/2021/08/two-rights-might-make-a-wrong).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Avoid using `delegatecall` inside loops. If unavoidable:
+				1. Ensure no `msg.value` is forwarded in loops
+				2. Use strict access controls
+				3. Implement reentrancy guards
+				4. Explicitly handle ether transfers outside of loops to prevent unintended forwarding
+			
+				```solidity
+				// Add reentrancy guard
+				bool private locked;
+				modifier noReentrant() {
+					require(!locked, "Reentrant call");
+					locked = true;
+					_;
+					locked = false;
+				}
+			
+				function safeDelegatecall(address target, bytes memory data) 
+					external payable noReentrant {
+					require(msg.value == 0, "Cannot forward ETH in delegatecall loop");
+			
+					(bool success,) = target.delegatecall(data);
+					require(success, "Delegatecall failed");
+				}
+			
+				function withdraw() external {
+					payable(msg.sender).transfer(address(this).balance);
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :arbitrary_from_in_transferFrom,
+				title: "\e[31mArbitrary `from` Address in `transferFrom` / `safeTransferFrom`\e[0m",
+				description: "Allowing any `from` address in `transferFrom` or `safeTransferFrom` can lead to unintended fund transfers if an attacker gains approval to move tokens on behalf of another address. Ensuring that `msg.sender` is either the `from` address or an approved operator prevents unauthorized token transfers. Using OpenZeppelin's `SafeERC20` implementation further enhances security by handling transfer failures properly.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Validate that `msg.sender` is either:
+				- The `from` address, or
+				- An approved operator
 				
-				issues_f = check_for_issues(sol_file[:path].to_s, sol_file[:path])
+				```solidity
+				function transferFrom(address from, address to, uint256 amount) public {
+					require(
+						from == msg.sender || allowance[from][msg.sender] >= amount,
+						"Unauthorized"
+					);
+					_transfer(from, to, amount);
+				}
 				
-				if !issues_f.empty?
-					issues_f.each do |key, value|
-						issues_map.each do |issue_map|
-							if key.to_s == issue_map[:key].to_s
-								issue_map[:issues] = issue_map[:issues] + "\n#{sol_file[:path]}#{value}" 
-							end
-						end
-					end
-				end
-			end
+				// Or use OpenZeppelin's implementation
+				import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+				SafeERC20.safeTransferFrom(token, msg.sender, to, amount);
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :msgvalue_in_loop,
+				title: "\e[31mAvoid Using `msg.value` Inside Loops to Prevent Logic Errors\e[0m",
+				description: "Reusing `msg.value` inside a loop can cause unintended behavior since the same value persists across iterations. This can break protocol logic, especially in cases involving multiple recipients or dynamic calculations. To ensure correct value distribution, track the remaining ETH explicitly and deduct the portion sent in each iteration.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Track remaining ETH explicitly:
+				
+				```solidity
+				uint256 remainingValue = msg.value;
+				for (uint i = 0; i < iterations; i++) {
+					uint256 portion = remainingValue / (iterations - i);
+					(bool success,) = payable(recipient).call{value: portion}("");
+					require(success, "Transfer failed");
+					remainingValue -= portion;
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :unsafe_casting,
+				title: "\e[31mUnsafe type casting\e[0m",
+				description: "Casting from a larger type to a smaller type without proper validation can cause truncation, leading to unexpected behavior. If the value exceeds the target type's range, it may result in overflow or underflow, potentially introducing critical vulnerabilities. To prevent this, ensure that all type conversions check for validity before execution. Using OpenZeppelin's `SafeCast` library helps mitigate these risks by reverting on invalid casts.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use OpenZeppelin's SafeCast library:
+				
+				```solidity
+				import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+				
+				uint256 largeValue = 500;
+				uint32 smallValue = SafeCast.toUint32(largeValue); // Reverts if overflow
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :uninitialized_storage,
+				title: "\e[31mUninitialized Storage Pointers\e[0m",
+				description: "Uninitialized storage variables may reference unintended storage slots, leading to data corruption or potential exploits. When a storage pointer is declared but not explicitly assigned, it can point to an arbitrary location in contract storage, causing unpredictable behavior. To prevent this, always initialize storage variables explicitly before use.\n\nReference: [Solidity Docs: Storage Pointers](https://docs.soliditylang.org/en/latest/types.html#data-location).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Always initialize storage variables explicitly:
+				
+				```solidity
+				// Explicit initialization
+				struct Data {
+					uint256 value;
+				}
+				
+				function store() public {
+					Data storage d; // INCORRECT
+					
+					Data storage d = data[msg.sender]; // CORRECT
+					d.value = 100;
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :get_dy_underlying_flash_loan,
+				title: "\e[31mPrice Manipulation Risk Due to Flash Loan Vulnerability in `get_dy_underlying()`\e[0m",
+				description: "Using `get_dy_underlying()` as a price oracle is unsafe because it can be manipulated through flash loans, leading to inaccurate pricing and potential exploits. Since flash loans allow attackers to temporarily inflate or deflate asset values, relying on this function for pricing can expose contracts to severe financial risks. To mitigate this, use a secure oracle like Chainlink, which provides tamper-resistant pricing and includes staleness checks to prevent the use of outdated data.\n\nReference: [Chainlink Data Feeds](https://docs.chain.link/data-feeds/).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use Chainlink oracles with staleness checks:
+				
+				```solidity
+				// Replace vulnerable code
+				uint256 price = curvePool.get_dy_underlying(...);
+				
+				// With secure oracle
+				(uint80 roundID, int256 price,, uint256 updatedAt,) = 
+					chainlinkFeed.latestRoundData();
+				require(updatedAt >= block.timestamp - 1 hours, "Stale price");
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :wsteth_price_steth,
+				title: "\e[31mIncorrect Price Calculation When Converting Between `wstETH` and `stETH`\e[0m",
+				description: "Incorrect price calculation between wstETH and stETH. Multiply `price` by `WstETH.stEthPerToken()` to convert to ETH units.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Multiply by conversion rate:
+				
+				```solidity
+				// Before (incorrect)
+				uint256 ethAmount = price * wstETHAmount;
+				
+				// After (correct)
+				uint256 stEthPerToken = IWstETH(wstETH).stEthPerToken();
+				uint256 ethAmount = price * wstETHAmount * stEthPerToken / 1e18;
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :yul_return_usage,
+				title: "\e[31mUnintended Execution Flow Due to `return` Statement in Yul Assembly\e[0m",
+				description: "Using `return` in Yul assembly immediately halts execution, potentially skipping critical operations such as cleanup or state updates. This can introduce unexpected behavior or leave the contract in an inconsistent state. To ensure safe execution, always complete necessary operations before returning from an assembly block.\n\nReference: [Inline Assembly | Solidity Docs](https://docs.soliditylang.org/en/latest/assembly.html#conventions-in-solidity).",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Avoid early returns in assembly blocks. Ensure all cleanup operations complete:
+				
+				```solidity
+				assembly {
+					let result := delegatecall(...)
+					// Perform all necessary operations
+					switch result
+					case 0 { revert(0, 0) }
+					default { return(0, 0) } // Safe if all ops complete
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :rtlo_character,
+				title: "\e[31mRTLO character detected\e[0m",
+				description: "The right-to-left override (RTLO) character (U+202E) can be used to visually obfuscate text, potentially misleading users or causing confusion in string representation. This could introduce risks in contract interactions or auditing processes. To mitigate this, ensure all strings and comments are free of RTLO characters. Additionally, implement a pre-commit hook to automatically detect RTLO characters and prevent their inclusion in the codebase.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				1. Remove RTLO characters from all strings/comments
+				2. Add pre-commit hook to detect RTLO:
+				```bash
+				# .pre-commit-config.yaml
+				- repo: https://github.com/pre-commit/pre-commit-hooks
+				rev: v4.4.0
+				hooks:
+					- id: check-byte-order-marker
+					- id: check-merge-conflict
+					- id: check-yaml
+					- id: detect-private-key
+					- id: end-of-file-fixer
+					- id: mixed-line-ending
+					- id: trailing-whitespace
+					- id: check-ast
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :multiple_retryable_calls,
+				title: "\e[31mRisk of Inconsistent Behavior Due to Multiple Retryable Calls\e[0m",
+				description: "Using multiple retryable ticket calls within a single function can lead to them being executed out of order, causing inconsistencies and unintended behavior. This can be mitigated by ensuring that each retryable call is associated with a unique, sequential identifier or nonce. To ensure correct execution order, use atomic transactions or sequence numbers to track and validate each retryable call.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Use atomic transactions or sequence numbers:
+				
+				```solidity
+				uint256 public nonce;
+				
+				function executeWithRetry() external {
+					uint256 currentNonce = nonce++;
+					// Include nonce in retryable data
+					inbox.createRetryableTicket({
+						data: abi.encode(currentNonce, ...)
+					});
+				}
+				```
+				RECOMMENDATIONS
+			}
+			issues_map << {
+				key: :contract_locks_ether,
+				title: "\e[31mLocked Ether Due to Missing Withdraw Function\e[0m",
+				description: "When a contract includes payable functions but lacks a method to withdraw Ether, funds can become locked, making them inaccessible to the contract owner or other authorized parties. This can result in a loss of control over the funds. To fix this, implement a withdraw function that allows Ether to be safely transferred out of the contract. Ensure proper access control to prevent unauthorized withdrawals.",
+				issues: "",
+				recommendations: <<~RECOMMENDATIONS
+				Add withdraw function with access control:
+				
+				```solidity
+				function withdrawETH(address payable to) external onlyOwner {
+					uint256 balance = address(this).balance;
+					(bool sent,) = to.call{value: balance}("");
+					require(sent, "Failed to send Ether");
+				}
+				
+				// Or use OpenZeppelin's Escrow pattern
+				import "@openzeppelin/contracts/utils/Escrow.sol";
+				```
+				RECOMMENDATIONS
+			}
+
+			process_files_in_parallel(sol_files, issues_map)
 
 			check_openzeppelin_version(directory, issues_map)
 
@@ -704,9 +2092,11 @@ begin
 
 			end
 
-			end_time = Time.now
-			execution_time = end_time - start_time
 			create_report(issues_map, sol_files)
+
+			# Track Analysis execution
+			end_time = Time.now
+			execution_time = end_time - start_time			
 			puts "Analysis executed in \e[94m#{execution_time}\e[0m seconds"
 
 		else
