@@ -11,10 +11,11 @@ __)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-A Solidity Static Analyzer made in Ruby designed to assess smart contracts written for code quality, security, and gas optimization issues. SolidityInspector checks for 23 gas, 9 non-critical, 16 low, 10 medium and 5 high issue and creates a markdown report containing the analysis results.
+SolidityInspector is a Ruby-based static analyzer built to enhance the security, efficiency, and reliability of Solidity smart contracts. Designed for developers, auditors, and security researchers, it systematically detects gas inefficiencies, security risks, and code quality issues, covering 23 Gas optimizations, 24 Non-Critical findings, 28 Low, 12 Medium, and 13 High-severity vulnerabilities.
 
-I've created it to help me in the process of learning smart contract auditing and using [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er), [Aderyn](https://github.com/Cyfrin/aderyn) and [Slither](https://github.com/crytic/slither) as inspiration.
+By running SolidityInspector on your codebase, you gain actionable insights that help prevent exploits, minimize gas costs, and streamline audits. The tool generates a comprehensive Markdown report, making it easy to review findings and integrate fixes into your workflow.
 
+My inspirations for creating this tool were [c4udit](https://github.com/byterocket/c4udit), [4analy3er](https://github.com/Picodes/4naly3er), [Aderyn](https://github.com/Cyfrin/aderyn) and [Slither](https://github.com/crytic/slither).
 
 ## Usage
 
@@ -113,89 +114,120 @@ Analysis executed in 0.005374072 seconds
 
 ## Example reports
 
-These reports were generated entirely by SolidityInspector without manual review.
-
-| Project | Date | Report |
-| ------- | ---- | ------ |
-| SolidityToken (a personal project) | 07-07-2024 | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23soliditytoken.md) |
-| KittensOnChain (a personal project) | 07-07-2024 | [<img src="img/doc-logo.png" width=18px>](report-examples/solidityinspector_report%23kittensonchain.md) |
-
-
 These are results obtained during contests using SolidityInspector.
 
 | Project | Platform | Date | Report | Type | Result |
 | ------- | -------- | ---- | ------ | ---- | ------ |
-| Wenwin | Code4rena | 09 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-03-wenwin-findings/issues/485) | QA Report | B grade |
-| Ethos Reserve | Code4rena | 07 - 03 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-02-ethos-findings/issues/31) | Gas Report | B grade |
-| Popcorn | Code4rena | 07 - 02 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-01-popcorn-findings/issues/22) | QA Report | B grade |
-| RabbitHole Quest Protocol | Code4rena | 30 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-01-rabbithole-findings/issues/32) | QA Report | B grade |
-| Astaria | Code4rena | 19 - 01 -2023 | [<img src="img/doc-logo.png" width=18px>](https://github.com/code-423n4/2023-01-astaria-findings/issues/128) | QA Report | B grade |
+| Wenwin | Code4rena | 09 - 03 -2023 | [📄](https://github.com/code-423n4/2023-03-wenwin-findings/issues/485) | QA Report | B grade |
+| Ethos Reserve | Code4rena | 07 - 03 -2023 | [📄](https://github.com/code-423n4/2023-02-ethos-findings/issues/31) | Gas Report | B grade |
+| Popcorn | Code4rena | 07 - 02 -2023 | [📄](https://github.com/code-423n4/2023-01-popcorn-findings/issues/22) | QA Report | B grade |
+| RabbitHole Quest Protocol | Code4rena | 30 - 01 -2023 | [📄](https://github.com/code-423n4/2023-01-rabbithole-findings/issues/32) | QA Report | B grade |
+| Astaria | Code4rena | 19 - 01 -2023 | [📄](https://github.com/code-423n4/2023-01-astaria-findings/issues/128) | QA Report | B grade |
 
 
 ### Detectors
 
+You can consult the [wiki](https://github.com/seeu-inspace/solidityinspector/wiki) for more information.
+
 | Number | Key | Title | Severity |
 |--------|-----|-------|----------|
-| 1 | `:bool_storage_overhead` | [Using bools for storage incurs overhead](https://github.com/seeu-inspace/solidityinspector/wiki#using-bools-for-storage-incurs-overhead) | Gas |
-| 2 | `:cache_array_outside_loop` | [Array length not cached outside of loop](https://github.com/seeu-inspace/solidityinspector/wiki#array-length-not-cached-outside-of-loop) | Gas |
-| 3 | `:default_variable_initialization` | [Variables initialized with default value](https://github.com/seeu-inspace/solidityinspector/wiki#variables-initialized-with-default-value) | Gas |
-| 4 | `:shift_instead_of_divmul` | [Missing implementation Shift Right/Left for division and multiplication](https://github.com/seeu-inspace/solidityinspector/wiki#missing-implementation-shift-rightleft-for-division-and-multiplication) | Gas |
-| 5 | `:use_diff_from_0` | [Unsigned integer comparison with `> 0`](https://github.com/seeu-inspace/solidityinspector/wiki#unsigned-integer-comparison-with--0) | Gas |
-| 6 | `:long_revert_string` | [Long `revert`/`require` string](https://github.com/seeu-inspace/solidityinspector/wiki#long-revertrequire-string) | Gas |
-| 7 | `:postfix_increment` | [Postfix increment/decrement used](https://github.com/seeu-inspace/solidityinspector/wiki#postfix-incrementdecrement-used) | Gas |
-| 8 | `:non_constant_or_immutable_variables` | [Variable not constant/immutable](https://github.com/seeu-inspace/solidityinspector/wiki#variable-not-constantimmutable) | Gas |
-| 9 | `:public_function` | [Make function external instead of public](https://github.com/seeu-inspace/solidityinspector/wiki#make-function-external-instead-of-public) | Gas |
-| 10 | `:revert_function_not_payable` | [Mark payable functions guaranteed to revert when called by normal users](https://github.com/seeu-inspace/solidityinspector/wiki#mark-payable-functions-guaranteed-to-revert-when-called-by-normal-users) | Gas |
-| 11 | `:assembly_address_zero` | [Use assembly to check for `address(0)`](https://github.com/seeu-inspace/solidityinspector/wiki#use-assembly-to-check-for-address0) | Gas |
-| 12 | `:assert_instead_of_require` | [Use `require` instead of `assert` when possible](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert-when-possible) | Gas |
-| 13 | `:small_uints` | [Usage of uints/ints smaller than 32 bytes (256 bits) incurs overhead](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-uintsints-smaller-than-32-bytes-256-bits-incurs-overhead) | Gas |
-| 14 | `:use_selfbalance` | [Use `selfbalance()` instead of `address(this).balance`](https://github.com/seeu-inspace/solidityinspector/wiki#use-selfbalance-instead-of-addressthisbalance) | Gas |
-| 15 | `:use_immutable` | [Usage of constant keccak variables results in extra hashing](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-constant-keccak-variables-results-in-extra-hashing) | Gas |
-| 16 | `:use_require_andand` | [Split `require()` statements that use `&&` to save gas](https://github.com/seeu-inspace/solidityinspector/wiki#split-require-statements-that-use--to-save-gas) | Gas |
-| 17 | `:math_gas_cost` | [`x += y` costs more gas than `x = x + y` for state variables](https://github.com/seeu-inspace/solidityinspector/wiki#x--y-costs-more-gas-than-x-x-y-for-state-variables) | Gas |
-| 18 | `:postfix_increment_unchecked` | [`++i/i++` should be `unchecked{++i}`/`unchecked{i++}` when it is not possible for them to overflow](https://github.com/seeu-inspace/solidityinspector/wiki#ii-should-be-uncheckediuncheckedi-when-it-is-not-possible-for-them-to-overflow) | Gas |
-| 19 | `:superfluous_event_fields` | [Superfluos event fields](https://github.com/seeu-inspace/solidityinspector/wiki#superfluos-event-fields) | Gas |
-| 20 | `:bool_equals_bool` | [Use `if(x)` or `if(!x)` instead of `if (x == bool)`](https://github.com/seeu-inspace/solidityinspector/wiki#use-ifx-or-ifx-instead-of-if-x-bool) | Gas |
-| 21 | `:strict_comparison` | [When possible, use non-strict comparison `>=` and/or `=<` instead of `>` `<`](https://github.com/seeu-inspace/solidityinspector/wiki#when-possible-use-non-strict-comparison-andor-instead-of) | Gas |
-| 22 | `:private_rather_than_public` | [If possible, use private rather than public for constants](https://github.com/seeu-inspace/solidityinspector/wiki#if-possible-use-private-rather-than-public-for-constants) | Gas |
-| 23 | `:use_recent_solidity` | [Use a more recent version of Solidity to save gas](https://github.com/seeu-inspace/solidityinspector/wiki#use-a-more-recent-version-of-solidity-to-save-gas) | Gas |
-| 24 | `:require_revert_missing_descr` | [`require()`/`revert()` statements should have descriptive reason strings](https://github.com/seeu-inspace/solidityinspector/wiki#requirerevert-statements-should-have-descriptive-reason-strings) | Non-Critical |
-| 25 | `:unnamed_return_params` | [Unnamed return parameters](https://github.com/seeu-inspace/solidityinspector/wiki#unnamed-return-parameters) | Non-Critical |
-| 26 | `:use_of_abi_encodepacked` | [Usage of `abi.encodePacked` instead of `bytes.concat()` for Solidity version `>= 0.8.4`](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-abiencodepacked-instead-of-bytesconcat-for-solidity-version-084) | Non-Critical |
-| 27 | `:make_modern_import` | [For modern and more readable code; update import usages](https://github.com/seeu-inspace/solidityinspector/wiki#for-modern-and-more-readable-code-update-import-usages) | Non-Critical |
-| 28 | `:todo_unfinished_code` | [Code base comments with TODOs](https://github.com/seeu-inspace/solidityinspector/wiki#code-base-comments-with-todos) | Non-Critical |
-| 29 | `:missing_spdx` | [`SPDX-License-Identifier` missing](https://github.com/seeu-inspace/solidityinspector/wiki#spdx-license-identifier-missing) | Non-Critical |
-| 30 | `:file_missing_pragma` | [File is missing pragma](https://github.com/seeu-inspace/solidityinspector/wiki#file-is-missing-pragma) | Non-Critical |
-| 31 | `:empty_body` | [Consider commenting why the body of the function is empty](https://github.com/seeu-inspace/solidityinspector/wiki#consider-commenting-why-the-body-of-the-function-is-empty) | Non-Critical |
-| 32 | `:magic_numbers` | [Magic Numbers in contract](https://github.com/seeu-inspace/solidityinspector/wiki#magic-numbers-in-contract) | Non-Critical |
-| 33 | `:public_func_not_used_internally` | [`public` function not used internally could be marked as `external`](https://github.com/seeu-inspace/solidityinspector/wiki#public-function-not-used-internally-could-be-marked-as-external) | Non-Critical |
-| 34 | `:unspecific_compiler_version_pragma` | [Compiler version Pragma is non-specific](https://github.com/seeu-inspace/solidityinspector/wiki#compiler-version-pragma-is-non-specific) | Low |
-| 35 | `:unsafe_erc20_operations` | [Unsafe ERC20 operations](https://github.com/seeu-inspace/solidityinspector/wiki#unsafe-erc20-operations) | Low |
-| 36 | `:deprecated_oz_library_functions` | [Deprecated OpenZeppelin library functions](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-openzeppelin-library-functions) | Low |
-| 37 | `:abiencoded_dynamic` | [Avoid using `abi.encodePacked()` with dynamic types when passing the result to a hash function](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-abiencodepacked-instead-of-bytesconcat-for-solidity-version--084) | Low |
-| 38 | `:transfer_ownership` | [Use `safeTransferOwnership` instead of the `transferOwnership` method](https://github.com/seeu-inspace/solidityinspector/wiki#use-safetransferownership-instead-of-the-transferownership-method) | Low |
-| 39 | `:draft_openzeppelin` | [Draft OpenZeppelin dependencies](https://github.com/seeu-inspace/solidityinspector/wiki#draft-openzeppelin-dependencies) | Low |
-| 40 | `:use_of_blocktimestamp` | [Timestamp dependency: use of `block.timestamp` (or `now`)](https://github.com/seeu-inspace/solidityinspector/wiki#timestamp-dependency-use-of-blocktimestamp-or-now) | Low |
-| 41 | `:calls_in_loop` | [Usage of calls inside of loop](https://github.com/seeu-inspace/solidityinspector/wiki#usage-of-calls-inside-of-loop) | Low |
-| 42 | `:outdated_pragma` | [Outdated Compiler Version](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-compiler-version) | Low |
-| 43 | `:ownableupgradeable` | [Use `Ownable2StepUpgradeable` instead of `OwnableUpgradeable` contract](https://github.com/seeu-inspace/solidityinspector/wiki#use-ownable2stepupgradeable-instead-of-ownableupgradeable-contract) | Low |
-| 44 | `:ecrecover_addr_zero` | [`ecrecover()` does not check for `address(0)`](https://github.com/seeu-inspace/solidityinspector/wiki#ecrecover-does-not-check-for-address0) | Low |
-| 45 | `:dont_use_assert` | [Use `require` instead of `assert`](https://github.com/seeu-inspace/solidityinspector/wiki#use-require-instead-of-assert) | Low |
-| 46 | `:deprecated_cl_library_function` | [Deprecated ChainLink library function](https://github.com/seeu-inspace/solidityinspector/wiki#deprecated-chainlink-library-function) | Low |
-| 47 | `:push_0_pragma` | [Solidity >= 0.8.20 `PUSH0` opcode incompatibility across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#solidity--0820-push0-opcode-incompatibility-across-evm-chains) | Low |
-| 48 | `:unused_error` | [Declared and not used errors in the contract](https://github.com/seeu-inspace/solidityinspector/wiki#declared-and-not-used-errors-in-the-contract) | Low |
-| 49 | `:single_point_of_control` | [Centralization risk detected: contract has a single point of control](https://github.com/seeu-inspace/solidityinspector/wiki#centralization-risk-detected-contract-has-a-single-point-of-control) | Medium |
-| 50 | `:use_safemint` | [Use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#use-_safemint-instead-of-_mint) | Medium |
-| 51 | `:use_safemint_msgsender` | [NFT can be frozen in the contract, use `_safeMint` instead of `_mint`](https://github.com/seeu-inspace/solidityinspector/wiki#nft-can-be-frozen-in-the-contract-use-_safemint-instead-of-_mint) | Medium |
-| 52 | `:use_of_cl_lastanswer` | [Use of the deprecated `latestAnswer` function in contracts](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-the-deprecated-latestanswer-function-in-contracts) | Medium |
-| 53 | `:solmate_not_safe` | [SafeTransferLib.sol does not check if a token is a contract or not](https://github.com/seeu-inspace/solidityinspector/wiki#safetransferlibsol-does-not-check-if-a-token-is-a-contract-or-not) | Medium |
-| 54 | `:nested_loop` | [Nested loops could lead to Denial of Service](https://github.com/seeu-inspace/solidityinspector/wiki#nested-loops-could-lead-to-denial-of-service) | Medium |
-| 55 | `:unchecked_recover` | [The output of the `ECDSA.recover` function is not checked](https://github.com/seeu-inspace/solidityinspector/wiki#the-output-of-the-ecdsarecover-function-is-not-checked) | Medium |
-| 56 | `:unchecked_transfer_transferfrom` | [The result of the `transfer` or `transferFrom` function is not checked](https://github.com/seeu-inspace/solidityinspector/wiki#the-result-of-the-transfer-or-transferfrom-function-is-not-checked) | Medium |
-| 57 | `:use_of_blocknumber` | [Use of `block.number` could lead to different results across EVM chains](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-blocknumber-could-lead-to-different-results-across-evm-chains) | Medium |
-| 58 | `:stale_check_missing` | [Stale Oracle Data Validation Missing in Contract Logic](https://github.com/seeu-inspace/solidityinspector/wiki#stale-oracle-data-validation-missing-in-contract-logic) | Medium 
-| 59 | `:delegatecall_in_loop` | [Use of `delegatecall` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-delegatecall-inside-of-a-loop) | High |
-| 60 | `:arbitrary_from_in_transferFrom` | [Arbitrary `from` in `transferFrom` / `safeTransferFrom`](https://github.com/seeu-inspace/solidityinspector/wiki#arbitrary-from-in-transferfrom--safetransferfrom) | High |
-| 61 | `:outdated_openzeppelin_contracts` | [Outdated version of openzeppelin-contracts](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts) | High |
-| 62 | `:outdated_openzeppelin_contracts_upgradeable` | [Outdated version of openzeppelin-contracts-upgradeable](https://github.com/seeu-inspace/solidityinspector/wiki#outdated-version-of-openzeppelin-contracts-upgradeable) | High |
-| 63 | `:msgvalue_in_loop` | [Use of `msg.value` inside of a loop](https://github.com/seeu-inspace/solidityinspector/wiki#use-of-msgvalue-inside-of-a-loop) | High |
+| 1 | `:bool_storage_overhead` | Avoid Using Boolean Variables for Storage | Gas |
+| 2 | `:cache_array_outside_loop` | Array length not cached outside of loop | Gas |
+| 3 | `:default_variable_initialization` | Remove Explicit Default Value Assignments | Gas |
+| 4 | `:shift_instead_of_divmul` | Use Bitwise Shifting Instead of Multiplication and Division | Gas |
+| 5 | `:use_diff_from_0` | Prefer `!= 0` Over `> 0` for Unsigned Integers | Gas |
+| 6 | `:long_revert_string` | Optimize `revert` and `require` Strings to Reduce Gas Costs | Gas |
+| 7 | `:postfix_increment` | Postfix Increment/Decrement Increases Gas Costs | Gas |
+| 8 | `:non_constant_or_immutable_variables` | Use `constant` or `immutable` for Unchanging Variables | Gas |
+| 9 | `:public_function` | Use `external` Instead of `public` for Functions When Possible | Gas |
+| 10 | `:revert_function_not_payable` | Mark Functions as `payable` When They Are Guaranteed to Revert for Normal Users | Gas |
+| 11 | `:assembly_address_zero` | Use Assembly to Check for `address(0)` to Reduce Gas Costs | Gas |
+| 12 | `:assert_instead_of_require` | Use `require` Instead of `assert` When Possible | Gas |
+| 13 | `:small_uints` | Using `uint` or `int` Smaller Than 32 Bytes Incurs Overhead | Gas |
+| 14 | `:use_selfbalance` | Use `selfbalance()` Instead of `address(this).balance` to Reduce Gas Costs | Gas |
+| 15 | `:use_immutable` | Using `constant` for Keccak Variables Causes Extra Hashing and Higher Gas Costs | Gas |
+| 16 | `:use_require_andand` | Splitting `require()` Statements That Use `&&` Can Reduce Gas Costs | Gas |
+| 17 | `:math_gas_cost` | Using `x = x + y` Instead of `x += y` for State Variables Saves Gas | Gas |
+| 18 | `:postfix_increment_unchecked` | Use `unchecked{++i}` or `unchecked{i++}` When Overflow Is Not Possible | Gas |
+| 19 | `:superfluous_event_fields` | Remove Redundant Event Fields to Save Gas | Gas |
+| 20 | `:bool_equals_bool` | Simplify Boolean Comparisons to Reduce Gas and Complexity | Gas |
+| 21 | `:strict_comparison` | Use `>=` or `<=` Instead of `>` or `<` to Reduce Gas Costs | Gas |
+| 22 | `:private_rather_than_public` | Use `private` Instead of `public` for Constants to Reduce Deployment Gas | Gas |
+| 23 | `:use_recent_solidity` | Use a More Recent Solidity Version to Optimize Gas Usage | Gas |
+| 24 | `:require_revert_missing_descr` | Add Descriptive Reason Strings to `require()` and `revert()` Statements | Non-Critical |
+| 25 | `:unnamed_return_params` | Use Named Return Parameters to Improve Readability | Non-Critical |
+| 26 | `:use_of_abi_encodepacked` | Usage of `abi.encodePacked` instead of `bytes.concat()` for Solidity version `>= 0.8.4` | Non-Critical |
+| 27 | `:make_modern_import` | Use Explicit Imports for Improved Readability and Efficiency | Non-Critical |
+| 28 | `:todo_unfinished_code` | Remove or Track `TODO` Comments to Maintain Code Quality | Non-Critical |
+| 29 | `:missing_spdx` | Add `SPDX-License-Identifier` to Avoid Legal and Usage Issues | Non-Critical |
+| 30 | `:file_missing_pragma` | Add a `pragma` Statement to Ensure Compiler Compatibility | Non-Critical |
+| 31 | `:empty_body` | Add a Comment to Explain Empty Function Bodies | Non-Critical |
+| 32 | `:magic_numbers` | Replace Magic Numbers with Named Constants for Better Readability | Non-Critical |
+| 33 | `:public_func_not_used_internally` | Use `external` Instead of `public` for Functions Not Called Internally | Non-Critical |
+| 34 | `:empty_blocks` | Empty code blocks | Non-Critical |
+| 35 | `:inconsistent_types` | Inconsistent Integer Declarations | Non-Critical |
+| 36 | `:large_literals` | Large Numeric Literals | Non-Critical |
+| 37 | `:state_change_no_event` | Lack of Event Emission for State Changes | Non-Critical |
+| 38 | `:abicoder_v2` | Redundant `abicoder v2` Pragma in Solidity `0.8.0+` | Non-Critical |
+| 39 | `:abi_encode_unsafe` | Potential Type Safety Issues When Using `abi.encodeWithSignature` or `abi.encodeWithSelector` | Non-Critical |
+| 40 | `:constant_naming` | Constants Should Use CONSTANT_CASE | Non-Critical |
+| 41 | `:control_structure_style` | Inconsistent Formatting of Control Structures | Non-Critical |
+| 42 | `:dangerous_while_loop` | Risk of Infinite Execution Due to `while(true)` Loops | Non-Critical |
+| 43 | `:long_lines` | Reduced Readability Due to Excessively Long Lines | Non-Critical |
+| 44 | `:mapping_style` | Inconsistent `mapping` Formatting Reduces Readability | Non-Critical |
+| 45 | `:hardcoded_address` | Hard-Coded Addresses Reduce Flexibility and Maintainability | Non-Critical |
+| 46 | `:safe_math_08` | Redundant Use of SafeMath in Solidity 0.8+ | Non-Critical |
+| 47 | `:scientific_notation_exponent` | Use of Exponentiation Instead of Scientific Notation | Non-Critical |
+| 48 | `:unspecific_compiler_version_pragma` | Use a Fixed Solidity Version to Ensure Consistent Compilation | Low |
+| 49 | `:unsafe_erc20_operations` | Use `SafeERC20` to Prevent Unsafe ERC20 Operations | Low |
+| 50 | `:deprecated_oz_library_functions` | Avoid Using Deprecated OpenZeppelin Library Functions | Low |
+| 51 | `:abiencoded_dynamic` | Avoid Using `abi.encodePacked()` with Dynamic Types When Hashing | Low |
+| 52 | `:transfer_ownership` | Use `safeTransferOwnership` Instead of `transferOwnership` for Safer Ownership Transfers | Low |
+| 53 | `:draft_openzeppelin` | Avoid Using Draft OpenZeppelin Contracts | Low |
+| 54 | `:use_of_blocktimestamp` | Avoid Relying on `block.timestamp` for Critical Logic | Low |
+| 55 | `:calls_in_loop` | Avoid Making External Calls Inside Loops | Low |
+| 56 | `:outdated_pragma` | Upgrade to a Recent Solidity Version to Avoid Security Risks | Low |
+| 57 | `:ownableupgradeable` | Use `Ownable2StepUpgradeable` Instead of `OwnableUpgradeable` for Safer Ownership Transfers | Low |
+| 58 | `:ecrecover_addr_zero` | Ensure `ecrecover()` Does Not Return `address(0)` | Low |
+| 59 | `:dont_use_assert` | Use `require` Instead of `assert` to Prevent Gas Wastage | Low |
+| 60 | `:deprecated_cl_library_function` | Avoid Using Deprecated Chainlink Library Functions | Low |
+| 61 | `:push_0_pragma` | Ensure Compatibility with `PUSH0` Opcode When Using Solidity `≥ 0.8.20` | Low |
+| 62 | `:unused_error` | Remove or Implement Unused Error Declarations | Low |
+| 63 | `:shadowed_global` | Avoid Shadowing Built-In Global Symbols | Low |
+| 64 | `:div_before_mul` | Unsafe Division Before Multiplication | Low |
+| 65 | `:uniswap_block_timestamp_deadline` | Lack of Protection When Using `block.timestamp` for Swap Deadlines | Low |
+| 66 | `:unused_internal_func` | Unused Internal Functions | Low |
+| 67 | `:assembly_in_constant` | Potential Side Effects from Using Assembly in `pure` or `view` Functions | Low |
+| 68 | `:costly_loop_operations` | Costly storage operations inside loops | Low |
+| 69 | `:reverts_in_loops` | Entire Transaction May Revert Due to `require` / `revert` Inside a Loop | Low |
+| 70 | `:decimals_not_erc20` | `decimals()` is not a part of the ERC-20 standard | Low |
+| 71 | `:decimals_not_uint8` | `decimals()` should be of type `uint8` | Low |
+| 72 | `:fallback_lacking_payable` | Fallback Lacking `payable` | Low |
+| 73 | `:symbol_not_erc20` | `symbol()` is not a part of the ERC-20 standard | Low |
+| 74 | `:upgradeable_missing_gap` | Risk of Storage Collision Due to Missing Storage Gap in Upgradeable Contract | Low |
+| 75 | `:hardcoded_year` | Inaccurate Year Duration Assumption | Low |
+| 76 | `:single_point_of_control` | Centralization Risk Due to Single Points of Control | Medium |
+| 77 | `:use_safemint` | Use `_safeMint` Instead of `_mint` to Prevent NFT Loss | Medium |
+| 78 | `:use_of_cl_lastanswer` | Replace `latestAnswer` with `latestRoundData()` for Reliable Price Feeds | Medium |
+| 79 | `:solmate_not_safe` | Use OpenZeppelin's `SafeERC20` Instead of `SafeTransferLib.sol` for Safer Transfers | Medium |
+| 80 | `:nested_loop` | Avoid Nested Loops to Prevent Denial of Service | Medium |
+| 81 | `:unchecked_recover` | Validate `ECDSA.recover` Output to Prevent Unintended Behavior | Medium |
+| 82 | `:unchecked_transfer_transferfrom` | Check the Return Value of `transfer` and `transferFrom` to Prevent Silent Failures | Medium |
+| 83 | `:use_of_blocknumber` | Use of `block.number` could lead to different results across EVM chains | Medium |
+| 84 | `:stale_check_missing` | Validate Oracle Data Freshness to Prevent Stale Price Usage | Medium |
+| 85 | `:tx_origin_usage` | Use of `tx.origin` for Authorization | Medium |
+| 86 | `:gas_griefing` | Use Bounded Gas for External Calls to Prevent Gas Griefing Attacks | Medium |
+| 87 | `:insecure_randomness` | Avoid Using `blockhash` for Randomness to Prevent Manipulation | Medium |
+| 88 | `:delegatecall_in_loop_payable` | Use of `delegatecall` Inside Loops in Payable Function | High |
+| 89 | `:arbitrary_from_in_transferFrom` | Arbitrary `from` Address in `transferFrom` / `safeTransferFrom` | High |
+| 90 | `:outdated_openzeppelin_contracts` | Outdated version of openzeppelin-contracts | High |
+| 91 | `:outdated_openzeppelin_contracts_upgradeable` | Outdated version of openzeppelin-contracts-upgradeable | High |
+| 92 | `:msgvalue_in_loop` | Avoid Using `msg.value` Inside Loops to Prevent Logic Errors | High |
+| 93 | `:unsafe_casting` | Unsafe type casting | High |
+| 94 | `:uninitialized_storage` | Uninitialized Storage Pointer | High |
+| 95 | `:get_dy_underlyig_flash_loan` | Price Manipulation Risk Due to Flash Loan Vulnerability in `get_dy_underlying()` | High |
+| 96 | `:wsteth_price_steth` | Incorrect Price Calculation When Converting Between `wstETH` and `stETH` | High |
+| 97 | `:yul_return_usage` | Unintended Execution Flow Due to `return` Statement in Yul Assembly | High |
+| 98 | `:rtlo_character` | RTLO character detected | High |
+| 99 | `:multiple_retryable_calls` | Risk of Inconsistent Behavior Due to Multiple Retryable Calls | High |
+| 100 | `:contract_locks_ether` | Locked Ether Due to Missing Withdraw Function | High |
