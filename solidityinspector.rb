@@ -233,7 +233,7 @@ def check_for_issues(solidity_file_path, solidity_file_content)
 	# :: low issues ::
 	issues[:unspecific_compiler_version_pragma] = " => pragma solidity " + pragma_version + ";" if pragma_version.include?("<") || pragma_version.include?(">") || pragma_version.include?(">=") || pragma_version.include?("<=") || pragma_version.include?("^")
 	issues[:outdated_pragma] = issues[:outdated_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 10], :less_than) && pragma_version != "no_version_found"
-	issues[:push_0_pragma] = issues[:push_0_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 19], :more_than) && pragma_version != "no_version_found" # da integrare con version_more_than
+	issues[:push_0_pragma] = issues[:push_0_pragma].to_s + " => #{pragma_version}" if version_compare?(pragma_version_clean, [0, 8, 19], :more_than) && pragma_version != "no_version_found"
 	issues[:upgradeable_missing_gap] = " => Contract appears upgradeable but missing __gap storage variable" if solidity_file_content.include?("Upgradeable") && !solidity_file_content.include?("__gap")
 
 	lines.each_with_index do |line, index|
