@@ -378,7 +378,7 @@ def check_for_issues(solidity_file_path, solidity_file_content)
 		# Check if constants are in CONSTANT_CASE
 		if line.match?(/(constant|immutable)\s+([a-zA-Z0-9_]+)/)
 			var_name = $2
-			unless var_name == var_name.upcase
+			unless var_name&.upcase.nil? || var_name == var_name.upcase
 				issues[:constant_naming] = issues[:constant_naming].to_s + format
 			end
 		end
