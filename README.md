@@ -117,7 +117,7 @@ Analysis executed in 0.005374072 seconds
 These are results obtained during contests using SolidityInspector.
 
 | Project | Platform | Date | Report | Type | Result |
-| :------ | :------: | :--: | :----: | :--: | :----: |
+| :-----: | :------: | :--: | :----: | :--: | :----: |
 | Wenwin | Code4rena | 09 - 03 -2023 | [📄](https://github.com/code-423n4/2023-03-wenwin-findings/issues/485) | QA Report | B grade |
 | Ethos Reserve | Code4rena | 07 - 03 -2023 | [📄](https://github.com/code-423n4/2023-02-ethos-findings/issues/31) | Gas Report | B grade |
 | Popcorn | Code4rena | 07 - 02 -2023 | [📄](https://github.com/code-423n4/2023-01-popcorn-findings/issues/22) | QA Report | B grade |
