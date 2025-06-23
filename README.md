@@ -117,7 +117,7 @@ Analysis executed in 0.005374072 seconds
 These are results obtained during contests using SolidityInspector.
 
 | Project | Platform | Date | Report | Type | Result |
-| ------- | -------- | ---- | ------ | ---- | ------ |
+| :-----: | :------: | :--: | :----: | :--: | :----: |
 | Wenwin | Code4rena | 09 - 03 -2023 | [📄](https://github.com/code-423n4/2023-03-wenwin-findings/issues/485) | QA Report | B grade |
 | Ethos Reserve | Code4rena | 07 - 03 -2023 | [📄](https://github.com/code-423n4/2023-02-ethos-findings/issues/31) | Gas Report | B grade |
 | Popcorn | Code4rena | 07 - 02 -2023 | [📄](https://github.com/code-423n4/2023-01-popcorn-findings/issues/22) | QA Report | B grade |
@@ -130,7 +130,7 @@ These are results obtained during contests using SolidityInspector.
 You can consult the [wiki](https://github.com/seeu-inspace/solidityinspector/wiki) for more information.
 
 | Number | Key | Title | Severity |
-|--------|-----|-------|----------|
+| :----- | :- | :--- | -------: |
 | 1 | `:bool_storage_overhead` | Avoid Using Boolean Variables for Storage | Gas |
 | 2 | `:cache_array_outside_loop` | Array length not cached outside of loop | Gas |
 | 3 | `:default_variable_initialization` | Remove Explicit Default Value Assignments | Gas |
