@@ -1,5 +1,3 @@
-# SolidityInspector
-
 ![si_header](img/si_header.png)
 
 [![riccardomalatesta.eth](https://img.shields.io/badge/ENS-riccardomalatesta.eth-blue)](https://app.ens.domains/riccardomalatesta.eth)
