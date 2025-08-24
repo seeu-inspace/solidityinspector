@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
+---
+
 SolidityInspector is a Ruby-based static analyzer built to enhance the security, efficiency, and reliability of Solidity smart contracts. Designed for developers, auditors, and security researchers, it systematically detects gas inefficiencies, security risks, and code quality issues, covering 23 Gas optimizations, 24 Non-Critical findings, 28 Low, 12 Medium, and 13 High-severity vulnerabilities.
 
 By running SolidityInspector on your codebase, you gain actionable insights that help prevent exploits, minimize gas costs, and streamline audits. The tool generates a comprehensive Markdown report, making it easy to review findings and integrate fixes into your workflow.
