@@ -1,13 +1,8 @@
 # SolidityInspector
 
-```Ruby
- __                     ___       _
-(_  _  |  o  _| o _|_ \/ | __  _ |_) _  _ _|_ _  __
-__)(_) |  | (_| |  |_ / _|_| |_> |  (/_(_  |_(_) |
-└───────■ Made with <3 by Riccardo Malatesta (@seeu)
-```
+![si_header](img/si_header.png)
 
-[![](https://img.shields.io/badge/ENS-riccardomalatesta.eth-blue)](https://app.ens.domains/riccardomalatesta.eth)
+[![riccardomalatesta.eth](https://img.shields.io/badge/ENS-riccardomalatesta.eth-blue)](https://app.ens.domains/riccardomalatesta.eth)
 [![License](https://img.shields.io/github/license/seeu-inspace/solidityinspector)](LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
